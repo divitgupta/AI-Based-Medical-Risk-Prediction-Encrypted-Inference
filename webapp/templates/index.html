@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Based Medical Risk Prediction & Encrypted Inference</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230f766e'/%3E%3Cpath d='M12 18s-5-3-5-7a2.8 2.8 0 0 1 5-1.8A2.8 2.8 0 0 1 17 11c0 4-5 7-5 7z' fill='white'/%3E%3C/svg%3E">
+  <script>
+    // Apply the saved theme before first paint (dark by default).
+    try { document.documentElement.dataset.theme = localStorage.getItem("hg-theme") || "dark"; } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- ═══════════════════ HERO ═══════════════════ -->
+    <header class="hero card">
+      <div class="hero-main">
+        <p class="eyebrow">Privacy-preserving diagnostics</p>
+        <h1>AI-Based Medical Risk Prediction &amp; Encrypted&nbsp;Inference</h1>
+        <p class="hero-sub">Three models of increasing complexity compared with 5-fold cross-validation on
+        Heart Disease — and a prediction served without the server ever seeing the patient's data.</p>
+      </div>
+      <div class="hero-side">
+        <div class="theme-toggle" role="group" aria-label="Colour theme">
+          <button class="theme-btn" data-theme="light">Light</button>
+          <button class="theme-btn" data-theme="dark">Dark</button>
+        </div>
+        <div class="hero-pills">
+          <span class="pill-badge teal"><span class="dot"></span>Working prototype · Phase 1</span>
+          <span class="pill-badge">Heart Disease · 5-fold CV</span>
+        </div>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-section="overview" role="tab">Overview</button>
+      <button class="tab" data-section="dataset" role="tab">Dataset</button>
+      <button class="tab" data-section="models" role="tab">Model Comparison</button>
+      <button class="tab" data-section="fhe" role="tab">Encrypted Inference</button>
+    </nav>
+
+    <main>
+
+      <!-- ═══════════════════ 1 · OVERVIEW ═══════════════════ -->
+      <section class="section" id="overview">
+        <div class="card lead">
+          <p class="eyebrow">Research questions</p>
+          <h2 class="lead-q">How does diagnostic performance change with model complexity — and can the
+          prediction be made without the server ever seeing the patient's data?</h2>
+        </div>
+
+        <div class="stat-grid" id="ovStats"></div>
+
+        <div class="card">
+          <p class="eyebrow">Method</p>
+          <h3 class="card-title">Pipeline</h3>
+          <ol class="pipeline" id="ovPipeline"></ol>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <p class="eyebrow">Evaluation</p>
+            <h3 class="card-title">Headline results <span class="muted">· pooled out-of-fold, 303 patients</span></h3>
+            <table class="table" id="ovResults"></table>
+            <p class="note" id="ovSelection"></p>
+          </div>
+          <div class="card">
+            <p class="eyebrow">Extension</p>
+            <h3 class="card-title">Encrypted inference <span class="muted">· logistic regression</span></h3>
+            <div id="ovFhe"></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card list-card ok">
+            <div class="list-head">
+              <div>
+                <p class="eyebrow ok"><span class="dot"></span>Complete</p>
+                <h3 class="card-title">Working in this prototype</h3>
+              </div>
+              <span class="count ok">5</span>
+            </div>
+            <ul class="checklist done">
+              <li>Heart Disease: cleaning, label correction, leakage-safe encoding</li>
+              <li>Stratified 5-fold CV with tuning inside each training fold</li>
+              <li>Logistic Regression, XGBoost and MLP trained and compared</li>
+              <li>Accuracy, precision, recall, F1, ROC-AUC, confusion matrices</li>
+              <li>Encrypted logistic regression: client → server → client</li>
+            </ul>
+          </div>
+          <div class="card list-card next">
+            <div class="list-head">
+              <div>
+                <p class="eyebrow muted-eyebrow"><span class="dot"></span>Planned</p>
+                <h3 class="card-title">Phase 2</h3>
+              </div>
+              <span class="count">4</span>
+            </div>
+            <ul class="checklist next">
+              <li>Breast Cancer full experiment</li>
+              <li>XGBoost and MLP under FHE (MLP with x² activation, per CryptoNets)</li>
+              <li>Memory and bootstrapping-cost benchmarks per model</li>
+              <li>Complexity vs accuracy vs encrypted-cost trade-off analysis</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════ 2 · DATASET ═══════════════════ -->
+      <section class="section hidden" id="dataset">
+        <div class="subtabs">
+          <button class="subtab active" data-ds="heart">Heart Disease <span class="pill">main</span></button>
+          <button class="subtab" data-ds="breast">Breast Cancer <span class="pill muted-pill">Phase 2</span></button>
+        </div>
+
+        <div id="dsHeart" class="stack">
+          <div class="stat-grid" id="hdStats"></div>
+
+          <div class="grid-2">
+            <div class="card">
+              <p class="eyebrow">Target</p>
+              <h3 class="card-title">Class balance</h3>
+              <div id="hdBalance"></div>
+            </div>
+            <div class="card">
+              <p class="eyebrow">Preprocessing</p>
+              <h3 class="card-title">Feature types</h3>
+              <table class="table compact" id="hdTypes"></table>
+              <p class="note">Every transformer is fitted inside each training fold, so no
+              statistic (mean, scale, most-frequent category) comes from held-out patients.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">Exploratory analysis</p>
+                <h3 class="card-title">Feature distribution by class</h3>
+              </div>
+              <select id="hdFeature" class="select" aria-label="Feature"></select>
+            </div>
+            <div id="hdHist" class="chart"></div>
+          </div>
+
+          <div class="card">
+            <p class="eyebrow">Exploratory analysis</p>
+            <h3 class="card-title">Correlation matrix <span class="muted">· including the disease label</span></h3>
+            <div id="hdCorr" class="chart"></div>
+          </div>
+
+          <div class="card list-card warn">
+            <p class="eyebrow warn"><span class="dot"></span>Data quality</p>
+            <h3 class="card-title">Corrections applied before training</h3>
+            <div class="grid-2 tight">
+              <div>
+                <h4 class="mini-h">1 · The CSV's labels are inverted</h4>
+                <p class="note">In this Kaggle export <code>target = 1</code> means <strong>no</strong> disease.
+                Every clinical sign points the same way, and 165 ones matches the 164 absence cases of the
+                original UCI data. We use <code>disease = 1 − target</code>, so recall means sensitivity to disease.</p>
+                <table class="table compact" id="hdEvidence"></table>
+              </div>
+              <div>
+                <h4 class="mini-h">2 · Invalid category codes</h4>
+                <p class="note">Two codes do not exist in the UCI codebook — they are how this export
+                stored missing values. They are treated as missing and imputed (most frequent value)
+                inside each training fold, keeping all 303 records.</p>
+                <table class="table compact" id="hdInvalid"></table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="dsBreast" class="stack hidden">
+          <div class="stat-grid" id="bcStats"></div>
+          <div class="card">
+            <p class="eyebrow">Target</p>
+            <h3 class="card-title">Class balance</h3>
+            <div id="bcBalance"></div>
+            <p class="phase2">Dataset available · full experiment in Phase 2. No model results are reported for this dataset yet.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════ 3 · MODEL COMPARISON ═══════════════════ -->
+      <section class="section hidden" id="models">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Evaluation</p>
+              <h3 class="card-title">Performance <span class="muted">· stratified 5-fold CV, positive class = Disease</span></h3>
+            </div>
+            <div class="toggle" id="metricMode">
+              <button class="toggle-btn active" data-mode="pooled">Pooled OOF</button>
+              <button class="toggle-btn" data-mode="folds">Mean ± std</button>
+            </div>
+          </div>
+          <table class="table metrics-table" id="mcTable"></table>
+          <p class="note" id="mcNote"></p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <p class="eyebrow">Discrimination</p>
+            <h3 class="card-title">ROC curves <span class="muted">· out-of-fold</span></h3>
+            <div id="mcRoc" class="chart"></div>
+          </div>
+          <div class="card">
+            <p class="eyebrow">Errors</p>
+            <h3 class="card-title">Confusion matrices <span class="muted">· threshold 0.5, all 303 patients</span></h3>
+            <div id="mcConfusion" class="cm-grid"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="eyebrow">Research question</p>
+          <h3 class="card-title">Complexity ladder</h3>
+          <div class="ladder" id="mcLadder"></div>
+          <p class="note">Complexity is reported in each model's own terms — a tree ensemble has no
+          weights to count, so it is described by its structure instead. Times for LR and XGBoost
+          include the inner grid search; the MLP uses the fixed synopsis architecture, so it has none.</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <p class="eyebrow">Tuning</p>
+            <h3 class="card-title">Hyperparameters chosen in each fold</h3>
+            <table class="table compact" id="mcFolds"></table>
+            <p class="note">Tuned by grid search on each fold's training rows only (inner 5-fold CV).</p>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">Training</p>
+                <h3 class="card-title">MLP training curve</h3>
+              </div>
+              <select id="mcCurveFold" class="select" aria-label="Fold"></select>
+            </div>
+            <div id="mcCurve" class="chart"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════ 4 · ENCRYPTED INFERENCE ═══════════════════ -->
+      <section class="section hidden" id="fhe">
+        <div class="fhe-layout">
+          <div class="card">
+            <p class="eyebrow">Profile input</p>
+            <h3 class="card-title">Patient</h3>
+            <label class="field">Model
+              <select id="fxModel" class="select"></select>
+            </label>
+            <label class="field">Patient
+              <div class="row">
+                <select id="fxPatient" class="select grow"></select>
+                <button class="btn ghost" id="fxRandom">Random</button>
+              </div>
+            </label>
+            <div class="scenarios">
+              <span class="field-label">Quick scenarios</span>
+              <div class="scenario-list" id="fxScenarios"></div>
+            </div>
+            <div class="scenario-note hidden" id="fxScenarioNote"></div>
+            <p class="note" id="fxFoldNote"></p>
+            <dl class="record" id="fxRecord"></dl>
+            <button class="btn primary block" id="fxRun">Run inference</button>
+          </div>
+
+          <div class="fhe-right">
+            <div class="card">
+              <p class="eyebrow">Encrypted flow</p>
+              <h3 class="card-title">Client → Server → Client</h3>
+              <div class="flow" id="fxFlow">
+                <div class="flow-step"><span class="flow-who">Client</span><span class="flow-what">Encode &amp; encrypt</span><span class="flow-t" id="fxTEnc">—</span></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step server"><span class="flow-who">Server</span><span class="flow-what">Compute on ciphertext</span><span class="flow-t" id="fxTSrv">—</span></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step"><span class="flow-who">Client</span><span class="flow-what">Decrypt</span><span class="flow-t" id="fxTDec">—</span></div>
+              </div>
+              <div class="cipher hidden" id="fxCipher"></div>
+            </div>
+
+            <div class="result-row">
+              <div class="result" id="fxPlain">
+                <span class="result-kind">Plaintext</span>
+                <span class="result-label">—</span>
+                <span class="result-meta"></span>
+              </div>
+              <div class="result" id="fxEnc">
+                <span class="result-kind">FHE</span>
+                <span class="result-label">—</span>
+                <span class="result-meta"></span>
+              </div>
+            </div>
+            <div class="banner hidden" id="fxBanner"></div>
+
+            <div class="card">
+              <p class="eyebrow">Evaluation</p>
+              <h3 class="card-title">Across all 303 out-of-fold predictions</h3>
+              <div id="fxAggregate"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      AI/ML Experiential Learning Project · Concrete ML (Zama) for FHE · every number on this page is computed by <code>healthguard/experiment.py</code>
+    </footer>
+  </div>
+
+  <div class="tooltip hidden" id="tooltip"></div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

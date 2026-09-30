@@ -1,0 +1,156 @@
+{
+  "breast_cancer": {
+    "LogisticRegression": {
+      "accuracy": 0.9473684210526315,
+      "precision": 0.9459459459459459,
+      "recall": 0.9722222222222222,
+      "f1": 0.958904109589041,
+      "roc_auc": 0.9947089947089947
+    },
+    "XGBoost": {
+      "accuracy": 0.9473684210526315,
+      "precision": 0.9459459459459459,
+      "recall": 0.9722222222222222,
+      "f1": 0.958904109589041,
+      "roc_auc": 0.9907407407407407
+    },
+    "MLP": {
+      "accuracy": 0.956140350877193,
+      "precision": 0.9855072463768116,
+      "recall": 0.9444444444444444,
+      "f1": 0.9645390070921985,
+      "roc_auc": 0.9920634920634921
+    },
+    "FHE": {
+      "logreg": {
+        "plaintext": {
+          "accuracy": 0.9736842105263158,
+          "precision": 0.9859154929577465,
+          "recall": 0.9722222222222222,
+          "f1": 0.9790209790209791,
+          "roc_auc": 0.9957010582010581
+        },
+        "encrypted": {
+          "accuracy": 0.9736842105263158,
+          "precision": 0.9859154929577465,
+          "recall": 0.9722222222222222,
+          "f1": 0.9790209790209791,
+          "roc_auc": 0.9957010582010581
+        },
+        "timing": {
+          "compile_time_s": 0.2262883186340332,
+          "total_inference_s": 1.9501161575317383,
+          "per_sample_ms": 17.106282083611738,
+          "n_samples": 114,
+          "agreement_with_plaintext": 1.0,
+          "real_fhe_per_sample_ms": 108.73599052429199,
+          "real_fhe_n_samples": 5,
+          "real_fhe_agreement": 1.0
+        }
+      },
+      "xgboost": {
+        "plaintext": {
+          "accuracy": 0.9385964912280702,
+          "precision": 0.9452054794520548,
+          "recall": 0.9583333333333334,
+          "f1": 0.9517241379310345,
+          "roc_auc": 0.9930555555555555
+        },
+        "encrypted": {
+          "accuracy": 0.9385964912280702,
+          "precision": 0.9452054794520548,
+          "recall": 0.9583333333333334,
+          "f1": 0.9517241379310345,
+          "roc_auc": 0.9930555555555555
+        },
+        "timing": {
+          "compile_time_s": 0.5399210453033447,
+          "total_inference_s": 2.4475667476654053,
+          "per_sample_ms": 21.469883751450926,
+          "n_samples": 114,
+          "agreement_with_plaintext": 1.0,
+          "real_fhe_per_sample_ms": 4867.758369445801,
+          "real_fhe_n_samples": 5,
+          "real_fhe_agreement": 1.0
+        }
+      }
+    }
+  },
+  "heart_disease": {
+    "LogisticRegression": {
+      "accuracy": 0.8360655737704918,
+      "precision": 0.8285714285714286,
+      "recall": 0.8787878787878788,
+      "f1": 0.8529411764705882,
+      "roc_auc": 0.8993506493506493
+    },
+    "XGBoost": {
+      "accuracy": 0.7704918032786885,
+      "precision": 0.7567567567567568,
+      "recall": 0.8484848484848485,
+      "f1": 0.8,
+      "roc_auc": 0.8679653679653679
+    },
+    "MLP": {
+      "accuracy": 0.8032786885245902,
+      "precision": 0.7837837837837838,
+      "recall": 0.8787878787878788,
+      "f1": 0.8285714285714286,
+      "roc_auc": 0.883116883116883
+    },
+    "FHE": {
+      "logreg": {
+        "plaintext": {
+          "accuracy": 0.8688524590163934,
+          "precision": 0.8571428571428571,
+          "recall": 0.9090909090909091,
+          "f1": 0.8823529411764706,
+          "roc_auc": 0.9145021645021645
+        },
+        "encrypted": {
+          "accuracy": 0.8688524590163934,
+          "precision": 0.8571428571428571,
+          "recall": 0.9090909090909091,
+          "f1": 0.8823529411764706,
+          "roc_auc": 0.9145021645021645
+        },
+        "timing": {
+          "compile_time_s": 0.1280381679534912,
+          "total_inference_s": 1.2572431564331055,
+          "per_sample_ms": 20.610543548083694,
+          "n_samples": 61,
+          "agreement_with_plaintext": 1.0,
+          "real_fhe_per_sample_ms": 123.56538772583008,
+          "real_fhe_n_samples": 5,
+          "real_fhe_agreement": 1.0
+        }
+      },
+      "xgboost": {
+        "plaintext": {
+          "accuracy": 0.7868852459016393,
+          "precision": 0.7631578947368421,
+          "recall": 0.8787878787878788,
+          "f1": 0.8169014084507042,
+          "roc_auc": 0.8766233766233765
+        },
+        "encrypted": {
+          "accuracy": 0.7868852459016393,
+          "precision": 0.7631578947368421,
+          "recall": 0.8787878787878788,
+          "f1": 0.8169014084507042,
+          "roc_auc": 0.8766233766233765
+        },
+        "timing": {
+          "compile_time_s": 0.5855848789215088,
+          "total_inference_s": 1.9378879070281982,
+          "per_sample_ms": 31.76865421357702,
+          "n_samples": 61,
+          "agreement_with_plaintext": 1.0,
+          "real_fhe_per_sample_ms": 7043.634796142578,
+          "real_fhe_n_samples": 5,
+          "real_fhe_agreement": 1.0
+        }
+      }
+    }
+  }
+}

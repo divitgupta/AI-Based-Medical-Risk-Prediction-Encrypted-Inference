@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard AI — Encrypted Diagnostic Inference</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">🔐</span>
+                <div>
+                    <h1>HealthGuard AI</h1>
+                    <p>Diagnostic ML pipeline with encrypted inference</p>
+                </div>
+            </div>
+            <nav class="dataset-tabs">
+                <button class="tab active" data-dataset="breast_cancer">Breast Cancer Wisconsin</button>
+                <button class="tab" data-dataset="heart_disease">Heart Disease (Cleveland)</button>
+            </nav>
+        </header>
+
+        <!-- Pipeline stage navigation -->
+        <nav class="view-nav">
+            <button class="view-btn active" data-view="data">
+                <span class="step-num">1</span> Data &amp; EDA
+            </button>
+            <button class="view-btn" data-view="models">
+                <span class="step-num">2</span> Models &amp; Training
+            </button>
+            <button class="view-btn" data-view="evaluation">
+                <span class="step-num">3</span> Evaluation
+            </button>
+            <button class="view-btn" data-view="inference">
+                <span class="step-num">4</span> Encrypted Inference
+            </button>
+        </nav>
+
+        <div class="fhe-status" id="fheStatus">
+            <span class="dot"></span>
+            <span id="fheStatusText">Checking FHE backend…</span>
+        </div>
+
+        <!-- ═══════════ VIEW 1 — DATA & EDA ═══════════════════════════ -->
+        <section class="view" id="view-data">
+            <div class="panel glass">
+                <div class="panel-header">
+                    <h2 id="edaTitle">Dataset</h2>
+                    <span class="badge" id="edaSource">--</span>
+                </div>
+
+                <div class="stat-row" id="edaStats"></div>
+
+                <div class="two-col">
+                    <div>
+                        <h3 class="sub-head">Class balance</h3>
+                        <div id="classBalance" class="class-balance"></div>
+                        <p class="note" id="balanceNote"></p>
+                    </div>
+                    <div>
+                        <h3 class="sub-head">Preprocessing</h3>
+                        <div class="kv-grid" id="prepGrid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel glass">
+                <div class="panel-header"><h2>Exploratory Data Analysis</h2></div>
+                <div class="plot-grid" id="edaPlots"></div>
+            </div>
+        </section>
+
+        <!-- ═══════════ VIEW 2 — MODELS & TRAINING ════════════════════ -->
+        <section class="view hidden" id="view-models">
+            <div class="panel glass">
+                <div class="panel-header">
+                    <h2>Training Protocol</h2>
+                    <span class="badge" id="protoScoring">--</span>
+                </div>
+                <div class="kv-grid wide-kv" id="protocolGrid"></div>
+                <p class="note" id="protoNote"></p>
+            </div>
+
+            <div class="model-cards" id="modelCards"></div>
+        </section>
+
+        <!-- ═══════════ VIEW 3 — EVALUATION ═══════════════════════════ -->
+        <section class="view hidden" id="view-evaluation">
+            <div class="panel glass">
+                <div class="panel-header">
+                    <h2>Metric Comparison</h2>
+                    <span class="badge">Held-out test set</span>
+                </div>
+                <div class="metric-chart" id="metricChart"></div>
+            </div>
+
+            <div class="panel glass">
+                <div class="panel-header">
+                    <h2>Benchmark Summary</h2>
+                    <span class="badge">All models · both datasets</span>
+                </div>
+                <div class="bench-wrap">
+                    <table class="bench-table">
+                        <thead>
+                            <tr><th>Dataset</th><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th></tr>
+                        </thead>
+                        <tbody id="benchBody">
+                            <tr><td colspan="7" class="muted">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel glass">
+                <div class="panel-header">
+                    <h2>Confusion Matrices &amp; ROC Curves</h2>
+                    <span class="badge" id="evalCount">--</span>
+                </div>
+                <div class="eval-grid" id="evalGrid"></div>
+            </div>
+        </section>
+
+        <!-- ═══════════ VIEW 4 — ENCRYPTED INFERENCE ══════════════════ -->
+        <section class="view hidden" id="view-inference">
+            <main>
+                <section class="panel glass">
+                    <div class="panel-header">
+                        <h2>Model Performance</h2>
+                        <span class="badge">Logistic Regression</span>
+                    </div>
+
+                    <table class="compare-table">
+                        <thead>
+                            <tr><th>Metric</th><th>Plaintext</th><th>FHE&nbsp;circuit</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Accuracy</td><td id="mAccP">--</td><td id="mAccE">--</td></tr>
+                            <tr><td>Recall</td><td id="mRecP">--</td><td id="mRecE">--</td></tr>
+                            <tr><td>Precision</td><td id="mPrcP">--</td><td id="mPrcE">--</td></tr>
+                            <tr><td>F1</td><td id="mF1P">--</td><td id="mF1E">--</td></tr>
+                            <tr><td>ROC-AUC</td><td id="mAucP">--</td><td id="mAucE">--</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="fhe-info">
+                        <h3>Compiled circuit</h3>
+                        <div class="kv-grid">
+                            <div class="kv"><span class="k">Quantisation</span><span class="v" id="cBits">--</span></div>
+                            <div class="kv"><span class="k">Encrypted features</span><span class="v" id="cFeat">--</span></div>
+                            <div class="kv"><span class="k">Compile time</span><span class="v" id="cCompile">--</span></div>
+                            <div class="kv"><span class="k">Test-set size</span><span class="v" id="cTest">--</span></div>
+                        </div>
+                        <p class="note">The server holds only the compiled circuit and the
+                        public evaluation key. Every feature it processes stays encrypted
+                        from the moment it leaves the client until the client decrypts the
+                        answer.</p>
+                    </div>
+                </section>
+
+                <section class="panel glass prediction-panel">
+                    <div class="panel-header">
+                        <h2>Live Inference</h2>
+                        <button class="btn-secondary" id="btnLoadPatient">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                            Load Random Test Patient
+                        </button>
+                    </div>
+
+                    <div class="patient-data" id="patientData">
+                        <div class="empty-state">
+                            <p>No patient record loaded.</p>
+                            <p class="sub">Load a random held-out record from the test set to begin.</p>
+                        </div>
+                    </div>
+
+                    <div class="true-label-box hidden" id="trueLabelBox">
+                        <span class="label">Ground truth</span>
+                        <span class="value" id="trueLabelValue">--</span>
+                    </div>
+
+                    <button class="btn-primary" id="btnPredict" disabled>
+                        <span class="btn-text">Run Plaintext &amp; Encrypted Inference</span>
+                        <div class="spinner hidden"></div>
+                    </button>
+
+                    <div class="pipeline hidden" id="pipeline">
+                        <div class="stage" id="stEncrypt">
+                            <span class="stage-icon">🔒</span>
+                            <span class="stage-name">Client encrypts</span>
+                            <span class="stage-time" id="tEncrypt">--</span>
+                        </div>
+                        <div class="stage-arrow">→</div>
+                        <div class="stage" id="stServer">
+                            <span class="stage-icon">⚙️</span>
+                            <span class="stage-name">Server computes<br><em>on ciphertext</em></span>
+                            <span class="stage-time" id="tServer">--</span>
+                        </div>
+                        <div class="stage-arrow">→</div>
+                        <div class="stage" id="stDecrypt">
+                            <span class="stage-icon">🔓</span>
+                            <span class="stage-name">Client decrypts</span>
+                            <span class="stage-time" id="tDecrypt">--</span>
+                        </div>
+                    </div>
+
+                    <div class="ciphertext-box hidden" id="ciphertextBox">
+                        <div class="ct-header">
+                            <span>What the server actually receives</span>
+                            <span class="ct-size" id="ctSize">--</span>
+                        </div>
+                        <code id="ctPreview">--</code>
+                    </div>
+
+                    <div class="results-row hidden" id="resultsRow">
+                        <div class="result-box" id="boxPlain">
+                            <div class="result-header">
+                                <h3>Plaintext</h3>
+                                <span class="confidence" id="confPlain">--</span>
+                            </div>
+                            <div class="prediction-value" id="predPlain">--</div>
+                            <div class="result-foot" id="latPlain">--</div>
+                        </div>
+                        <div class="result-box" id="boxEnc">
+                            <div class="result-header">
+                                <h3>Encrypted</h3>
+                                <span class="confidence" id="confEnc">--</span>
+                            </div>
+                            <div class="prediction-value" id="predEnc">--</div>
+                            <div class="result-foot" id="latEnc">--</div>
+                        </div>
+                    </div>
+
+                    <div class="verdict hidden" id="verdict"></div>
+
+                    <!-- Why the model decided this -->
+                    <div class="explain-box hidden" id="explainBox">
+                        <div class="explain-header">
+                            <h3>Why this prediction?</h3>
+                            <span class="explain-sub" id="explainLogOdds">--</span>
+                        </div>
+                        <p class="note">Each bar is the feature's signed contribution
+                        <code>wᵢ · xᵢ</code> to the log-odds of the linear model — how much
+                        that measurement pushed the decision, and in which direction.</p>
+                        <div id="explainBars"></div>
+                    </div>
+                </section>
+            </main>
+        </section>
+
+        <footer>
+            <p>AI/ML Experiential Learning Project · Privacy-preserving diagnostics with Concrete&nbsp;ML</p>
+        </footer>
+    </div>
+
+    <!-- Lightbox for plots -->
+    <div class="lightbox hidden" id="lightbox">
+        <img id="lightboxImg" src="" alt="">
+        <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
