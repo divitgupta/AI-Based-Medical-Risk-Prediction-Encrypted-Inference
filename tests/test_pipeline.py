@@ -8,7 +8,8 @@ import numpy as np
 import pytest
 
 from healthguard import config
-from healthguard.data import fold_of_each_sample, folds, load_heart
+from healthguard.base_paper import _splits
+from healthguard.data import fold_of_each_sample, folds, load_base_paper, load_heart
 from healthguard.models import build_logreg, build_mlp
 
 
@@ -88,3 +89,42 @@ def test_mlp_input_width_comes_from_the_data(heart):
     pipe.fit(X, y)
     n_encoded = len(pipe.named_steps["prep"].get_feature_names_out())
     assert pipe.named_steps["model"].layer_sizes_ == [n_encoded, 16, 8, 1]
+
+
+def test_base_paper_file_is_our_patients_repeated(heart):
+    X, y, group = load_base_paper()
+    assert len(y) == 1025 and len(np.unique(group)) == 302
+    ours = {tuple(np.nan_to_num(r, nan=-1)) for r in np.column_stack([heart[0].to_numpy(), heart[1]])}
+    theirs = {tuple(np.nan_to_num(r, nan=-1)) for r in np.column_stack([X.to_numpy(), y])}
+    assert theirs <= ours          # every base-paper record, with its label, is one of ours
+
+
+def test_patient_split_keeps_every_copy_on_one_side():
+    _, y, group = load_base_paper()
+    for tr, te in _splits("patient", y, group):
+        assert not set(group[tr]) & set(group[te])
+    leaked = sum(np.isin(group[te], group[tr]).sum() for tr, te in _splits("row", y, group))
+    assert leaked > 0.9 * len(y)   # a plain row split leaks almost every test patient
+
+
+def test_mlp_square_activation_is_supported(heart):
+    X, y = heart
+    tr, _ = folds(y)[0]
+    pipe, _ = build_mlp()
+    pipe.set_params(model__activation="square", model__max_epochs=5)
+    pipe.fit(X.iloc[tr], y[tr])
+    p = pipe.predict_proba(X.iloc[tr])[:, 1]
+    assert np.all((p >= 0) & (p <= 1))
+
+
+def test_elastic_inner_oof_predicts_every_training_row_from_unseen_models(heart):
+    from healthguard.elastic import inner_oof
+    X, y = heart
+    tr, _ = folds(y)[0]
+    pipe, _ = build_logreg()
+    pipe.set_params(model__C=0.1)
+    p = inner_oof(pipe, X.iloc[tr], y[tr])
+    assert p.shape == (len(tr),) and np.all((p > 0) & (p < 1))
+    # Out-of-fold, so it must differ from the fit-on-everything predictions.
+    full = pipe.fit(X.iloc[tr], y[tr]).predict_proba(X.iloc[tr])[:, 1]
+    assert not np.allclose(p, full)

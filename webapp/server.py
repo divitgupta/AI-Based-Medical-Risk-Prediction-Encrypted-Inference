@@ -1,5 +1,5 @@
 """
-Web app for the Phase-1 prototype.
+Web app for the prototype (Phase 1 + Phase 2).
 
 Loads what the experiment produced — metrics, out-of-fold predictions, the
 fitted fold pipelines and the precompiled FHE bundles — and never trains or
@@ -11,6 +11,7 @@ re-implements preprocessing. Run from the project root:
 import hashlib
 import json
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -28,12 +29,19 @@ app.json.sort_keys = False   # keep the complexity-ladder order LR → XGB → M
 
 STATE = {
     "metrics": None, "predictions": None, "eda": None, "curves": None,
+    "base_paper": None, "elastic": None,
     "X": None, "y": None, "fold": None,
     "pipelines": {},     # key -> [fold pipeline, ...]
-    "encrypted": {},     # key -> [EncryptedModel per fold]
+    "encrypted": {},     # key -> {fold: EncryptedModel}
     "fhe_status": {},    # key -> {"ready": bool, "reason": str}
     "scenarios": [],     # demo presets, one real patient per probability band
 }
+
+# Logistic regression's keys are tiny, so all five folds are loaded at start-up.
+# XGBoost and the MLP need ~1 GB and ~2.6 GB of evaluation keys per fold, so
+# only one fold of each is kept in memory and loaded on first use.
+EAGER_FHE = {"logreg"}
+_FHE_LOCKS = {k: threading.Lock() for k in config.MODEL_KEYS}
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -52,6 +60,10 @@ def load_state():
     STATE["predictions"] = _read("predictions.json")
     STATE["eda"] = _read("eda.json")
     STATE["curves"] = _read("training_curves.json")
+    bp = config.RESULTS / "base_paper.json"
+    STATE["base_paper"] = json.loads(bp.read_text()) if bp.exists() else None
+    el = config.RESULTS / "elastic.json"
+    STATE["elastic"] = json.loads(el.read_text()) if el.exists() else None
 
     X, y = load_heart()
     preds = STATE["predictions"]
@@ -108,43 +120,61 @@ def _build_scenarios():
     return out
 
 
+def _bundle(key, k):
+    return config.FHE_DIR / key / f"fold{k}"
+
+
 def _load_fhe():
-    from healthguard.fhe import EncryptedModel
+    from healthguard.fhe import OUTPUT_KIND, EncryptedModel
 
     for key in config.MODEL_KEYS:
-        STATE["fhe_status"][key] = {"ready": False,
-                                    "reason": "Phase 2 · not compiled in current prototype"}
+        STATE["encrypted"][key] = {}
+        if not all((_bundle(key, k) / "server.zip").exists() for k in range(config.N_FOLDS)):
+            STATE["fhe_status"][key] = {"ready": False,
+                                        "reason": "FHE bundles missing — run scripts/run_experiments.sh"}
+            print(f"  [warn] {key}: FHE bundles missing; encrypted inference disabled")
+            continue
+        STATE["fhe_status"][key] = {"ready": True, "reason": ""}
+        if key not in EAGER_FHE:
+            continue
 
-    bundle_root = config.FHE_DIR / "logreg"
-    bundles = [bundle_root / f"fold{k}" for k in range(config.N_FOLDS)]
-    if not all((b / "server.zip").exists() for b in bundles):
-        STATE["fhe_status"]["logreg"]["reason"] = (
-            "FHE bundles missing — run scripts/run_experiments.sh")
-        print("  [warn] FHE bundles missing; encrypted inference disabled")
-        return
+        t0 = time.perf_counter()
+        try:
+            for k in range(config.N_FOLDS):
+                STATE["encrypted"][key][k] = EncryptedModel(_bundle(key, k), OUTPUT_KIND[key])
+        except Exception as e:  # never compile here — see note in healthguard/fhe.py
+            STATE["fhe_status"][key] = {"ready": False, "reason": f"FHE bundle failed to load: {e}"}
+            print(f"  [warn] {key}: FHE bundle load failed: {e}")
+            continue
+        print(f"Loaded {config.N_FOLDS} precompiled {key} FHE bundles (no compilation) "
+              f"in {time.perf_counter() - t0:.2f}s")
 
+        # Warm-up: the first encrypted call on each circuit pays a one-off
+        # runtime initialisation (~0.5 s). Run it once per fold at start-up so
+        # the timings shown during the demo are steady-state.
+        t0 = time.perf_counter()
+        for k, enc in STATE["encrypted"][key].items():
+            i = int(np.flatnonzero(STATE["fold"] == k)[0])
+            pipe = STATE["pipelines"][key][k]
+            enc.predict(pipe.named_steps["prep"].transform(STATE["X"].iloc[[i]]))
+        print(f"Warmed up {config.N_FOLDS} {key} FHE circuits in {time.perf_counter() - t0:.2f}s")
+    lazy = [k for k in config.MODEL_KEYS if k not in EAGER_FHE and STATE["fhe_status"][k]["ready"]]
+    if lazy:
+        print(f"FHE bundles for {', '.join(lazy)} load on first use (large evaluation keys)")
+
+
+def _encrypted_model(key, k):
+    """The EncryptedModel for one fold, loading it (and evicting others) if needed.
+    Returns (model, setup seconds spent loading it now)."""
+    from healthguard.fhe import OUTPUT_KIND, EncryptedModel
+
+    cache = STATE["encrypted"][key]
+    if k in cache:
+        return cache[k], 0.0
+    cache.clear()            # free the previous fold's keys first
     t0 = time.perf_counter()
-    try:
-        STATE["encrypted"]["logreg"] = [
-            EncryptedModel(b, config.FHE_DIR / "keys" / "logreg" / b.name) for b in bundles
-        ]
-    except Exception as e:  # never compile here — see note in healthguard/fhe.py
-        STATE["fhe_status"]["logreg"]["reason"] = f"FHE bundle failed to load: {e}"
-        print(f"  [warn] FHE bundle load failed: {e}")
-        return
-    STATE["fhe_status"]["logreg"] = {"ready": True, "reason": ""}
-    print(f"Loaded {len(bundles)} precompiled FHE bundles (no compilation) "
-          f"in {time.perf_counter() - t0:.2f}s")
-
-    # Warm-up: the first encrypted call on each circuit pays a one-off runtime
-    # initialisation (~0.5 s). Run it once per fold at start-up so the timings
-    # shown during the demo are steady-state rather than first-call outliers.
-    t0 = time.perf_counter()
-    for k, enc in enumerate(STATE["encrypted"]["logreg"]):
-        i = int(np.flatnonzero(STATE["fold"] == k)[0])
-        pipe = STATE["pipelines"]["logreg"][k]
-        enc.predict(pipe.named_steps["prep"].transform(STATE["X"].iloc[[i]]))
-    print(f"Warmed up {len(bundles)} FHE circuits in {time.perf_counter() - t0:.2f}s")
+    cache[k] = EncryptedModel(_bundle(key, k), OUTPUT_KIND[key])
+    return cache[k], time.perf_counter() - t0
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -156,10 +186,10 @@ def _plaintext_prob(key, i):
     return float(pipe.predict_proba(STATE["X"].iloc[[i]])[0, 1])
 
 
-def _fhe_disagreements():
+def _fhe_disagreements(key):
     """Patients whose encrypted and plaintext OOF decisions differ."""
-    plain = np.array(STATE["predictions"]["prob"]["logreg"])
-    enc = np.array(STATE["predictions"]["prob_fhe"]["logreg"])
+    plain = np.array(STATE["predictions"]["prob"][key])
+    enc = np.array(STATE["predictions"]["prob_fhe"][key])
     ids = np.flatnonzero((plain >= 0.5) != (enc >= 0.5))
     return [{"id": int(i), "fold": int(STATE["fold"][i]) + 1,
              "plain": float(plain[i]), "enc": float(enc[i])} for i in ids]
@@ -220,8 +250,8 @@ def overview():
         "model_order": config.MODEL_KEYS,
         "models": {k: {"name": v["name"], "pooled": v["pooled"], "summary": v["summary"]}
                    for k, v in m["models"].items()},
-        "fhe": m["fhe"]["logreg"],
-        "fhe_disagreements": _fhe_disagreements(),
+        "fhe": m["fhe"],
+        "fhe_disagreements": {k: _fhe_disagreements(k) for k in config.MODEL_KEYS},
         "fhe_status": STATE["fhe_status"],
         "selection_metric": m["selection_metric"],
         "meta": m["meta"],
@@ -239,6 +269,25 @@ def eda(ds):
 def results():
     return jsonify({"metrics": STATE["metrics"], "curves": STATE["curves"],
                     "model_order": config.MODEL_KEYS})
+
+
+@app.route("/api/phase2")
+def phase2():
+    m = STATE["metrics"]
+    return jsonify({"model_order": config.MODEL_KEYS,
+                    "models": {k: {"name": v["name"], "pooled": v["pooled"],
+                                   "complexity": [f["complexity"] for f in v["fold_info"]]}
+                               for k, v in m["models"].items()},
+                    "fhe": m["fhe"], "study": m["fhe_study"],
+                    "base_paper": STATE["base_paper"],
+                    "base_paper_data": STATE["eda"].get("base_paper")})
+
+
+@app.route("/api/elastic")
+def elastic():
+    if STATE["elastic"] is None:
+        abort(404, "Run python -m healthguard.elastic to build the Elastic Learner")
+    return jsonify(STATE["elastic"])
 
 
 @app.route("/api/patients")
@@ -280,19 +329,25 @@ def infer(key):
                       "reason": STATE["fhe_status"][key]["reason"]},
     }
 
-    if STATE["fhe_status"][key]["ready"]:
+    # ?encrypted=0 skips the FHE path (used by tests that only check plaintext).
+    if request.args.get("encrypted", "1") == "0":
+        out["encrypted"] = {"available": False, "reason": "skipped by request"}
+    elif STATE["fhe_status"][key]["ready"]:
         # Client side: the *saved* fitted preprocessor encodes the record.
         t_prep = time.perf_counter()
         x_encoded = pipe.named_steps["prep"].transform(x_raw)
         prep_ms = (time.perf_counter() - t_prep) * 1000
 
-        p_enc, timings, ct, ct_out = STATE["encrypted"][key][k].predict(x_encoded)
+        with _FHE_LOCKS[key]:
+            enc_model, setup_s = _encrypted_model(key, k)
+            p_enc, timings, ct, ct_out = enc_model.predict(x_encoded)
         body = ct[len(ct) // 2: len(ct) // 2 + 24]
         out["encrypted"].update({
             "prob": p_enc,
             "label": _label(int(p_enc >= 0.5)),
             "timings_ms": {"preprocess": prep_ms, **timings},
             "total_ms": prep_ms + sum(timings.values()),
+            "setup_ms": setup_s * 1000,
             "ciphertext_bytes": len(ct),
             "result_ciphertext_bytes": len(ct_out),
             "ciphertext_sha256": hashlib.sha256(ct).hexdigest()[:16],

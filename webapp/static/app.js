@@ -1,10 +1,10 @@
-/* HealthGuard Phase-1 dashboard. Every number is fetched from the API, which
+/* HealthGuard dashboard (Phase 1 + Phase 2). Every number is fetched from the API, which
    serves what healthguard/experiment.py produced — nothing is hardcoded. */
 
 const $ = (id) => document.getElementById(id);
 // Colours are CSS variables, so switching theme recolours every chart
 // without re-rendering. (SVG attributes cannot read var(), so charts use style.)
-const MODEL_COLOR = { logreg: "var(--m-logreg)", xgboost: "var(--m-xgboost)", mlp: "var(--m-mlp)" };
+const MODEL_COLOR = { logreg: "var(--m-logreg)", xgboost: "var(--m-xgboost)", mlp: "var(--m-mlp)", elastic: "var(--accent)" };
 const CLASS_COLOR = { 0: "var(--c-healthy)", 1: "var(--c-disease)" };
 const CLASS_NAME = { 0: "No Disease", 1: "Disease" };
 const METRICS = [
@@ -14,7 +14,10 @@ const METRICS = [
 
 const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
 const fix = (v, d = 3) => Number(v).toFixed(d);
-const ms = (v) => (v >= 1000 ? (v / 1000).toFixed(2) + " s" : v.toFixed(v < 10 ? 1 : 0) + " ms");
+const ms = (v) => (v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 1 : 2) + " s" : v < 0.1 ? "< 0.1 ms" : v.toFixed(v < 10 ? 1 : 0) + " ms");
+const bytes = (b) => b >= 1e9 ? (b / 1e9).toFixed(b >= 1e10 ? 0 : 2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(0) + " MB"
+  : b >= 1e3 ? (b / 1e3).toFixed(1) + " kB" : b === 0 ? "none" : Math.round(b) + " B";
+const qset = (st) => `${st.n_bits}-bit${st.rounding_threshold_bits ? `, rounding ${st.rounding_threshold_bits}` : ""}`;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const range = (xs) => {
   const lo = Math.min(...xs), hi = Math.max(...xs);
@@ -56,7 +59,7 @@ setTheme(document.documentElement.dataset.theme || "dark");
 
 /* ─── Navigation ────────────────────────────────────────────────────────── */
 const rendered = {};
-const renderers = { overview: renderOverview, dataset: renderDataset, models: renderModels, fhe: renderFhe };
+const renderers = { overview: renderOverview, dataset: renderDataset, models: renderModels, fhe: renderFhe, phase2: renderPhase2, elastic: renderElastic };
 
 function show(section) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.section === section));
@@ -150,6 +153,31 @@ function legend(items) {
     `<span class="legend-item"><span class="swatch" style="background:${i.color}"></span>${esc(i.label)}</span>`).join("")}</div>`;
 }
 
+/* Horizontal bars on a log scale: rows = [{label, value, color, text}] */
+function logBars(rows, { width = 520, unit = "" } = {}) {
+  const m = { l: 150, r: 90 }, rowH = 46, height = rows.length * rowH + 30;
+  const vals = rows.map((r) => r.value).filter((v) => v > 0);
+  const lo = Math.pow(10, Math.floor(Math.log10(Math.min(...vals)))), hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
+  const x = (v) => m.l + (Math.log10(Math.max(v, lo)) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo) || 1) * (width - m.l - m.r);
+  let body = "";
+  for (let e = Math.log10(lo); e <= Math.log10(hi); e++) {
+    const px = x(Math.pow(10, e));
+    body += `<line x1="${px}" x2="${px}" y1="4" y2="${height - 24}" style="stroke:var(--chart-grid)"/>
+      <text x="${px}" y="${height - 8}" text-anchor="middle">${esc(unit === "s" ? (Math.pow(10, e) >= 1 ? Math.pow(10, e) + " s" : Math.pow(10, e) * 1000 + " ms") : bytes(Math.pow(10, e)))}</text>`;
+  }
+  rows.forEach((r, i) => {
+    const y = 8 + i * rowH;
+    body += `<text x="${m.l - 10}" y="${y + 20}" text-anchor="end" style="font-weight:600">${esc(r.label)}</text>`;
+    if (r.value > 0) {
+      body += `<rect x="${m.l}" y="${y + 6}" width="${Math.max(2, x(r.value) - m.l)}" height="22" rx="4" style="fill:${r.color}" data-tip="${esc(r.label)}: ${esc(r.text)}"/>
+        <text x="${x(r.value) + 8}" y="${y + 22}">${esc(r.text)}</text>`;
+    } else {
+      body += `<text x="${m.l + 4}" y="${y + 22}" style="fill:var(--text-2)">${esc(r.text)}</text>`;
+    }
+  });
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" style="max-width:${width * 1.2}px">${body}</svg>`;
+}
+
 function divergingColor(v) {
   // −1 → blue, 0 → card surface, +1 → coral. Mixing towards the surface (not
   // white) keeps weak correlations quiet on both the dark and light themes.
@@ -199,7 +227,7 @@ async function renderOverview() {
     ["5-fold CV", "tuning inside each fold"],
     ["Models", "LR · XGBoost · MLP"],
     ["Evaluate", "Acc · Prec · Recall · F1 · AUC"],
-    ["FHE", "LR via Concrete ML", "fhe"],
+    ["FHE", "LR · XGBoost · MLP via Concrete ML", "fhe"],
   ].map(([t, s, c]) => `<li class="${c || ""}"><strong>${t}</strong><span>${s}</span></li>`).join("");
 
   const keys = o.model_order;
@@ -213,21 +241,19 @@ async function renderOverview() {
     }).join("") + "</tbody>";
   $("ovSelection").textContent = `Model selection: ${o.selection_metric} — our Phase-1 choice, consistent with the synopsis' emphasis on sensitivity (a missed disease case is the costlier error). Bold = best per column.`;
 
-  const f = o.fhe, agreeN = o.n_samples - f.n_disagree;
-  $("ovFhe").innerHTML = `
-    <div class="agg">
-      <div class="agg-item tint-healthy"><b>${agreeN}/${o.n_samples}</b><span>encrypted = plaintext decision (${pct(f.agreement, 2)})</span></div>
-      <div class="agg-item tint-blue"><b>${ms(f.real_exec_ms_per_sample)}</b><span>per patient, genuine encrypted execution</span></div>
-      <div class="agg-item"><b>${f.n_bits}-bit</b><span>quantisation of inputs &amp; weights</span></div>
-    </div>
-    <p class="note">${o.fhe_status.logreg.ready
-      ? "The server evaluates the model on ciphertext only — it never sees a feature value or holds the decryption key."
-      : esc(o.fhe_status.logreg.reason)}</p>`;
+  $("ovFhe").innerHTML = `<table class="table compact"><thead><tr><th>Model</th><th>Same decision</th><th>Encrypted accuracy</th><th>Time / patient</th></tr></thead><tbody>` +
+    keys.map((k) => {
+      const f = o.fhe[k];
+      return `<tr><td><span class="model-name"><span class="swatch" style="background:${MODEL_COLOR[k]}"></span>${esc(o.models[k].name)}</span></td>
+        <td>${o.n_samples - f.n_disagree}/${o.n_samples}</td><td>${pct(f.pooled.accuracy)}</td><td>${ms(f.real_exec_ms_per_sample)}</td></tr>`;
+    }).join("") + `</tbody></table>
+    <p class="note">The server evaluates each model on ciphertext only — it never sees a feature value or holds the decryption key.
+    Time is genuine encrypted execution on this laptop; cost grows steeply with model complexity (see the last tab).</p>`;
 }
 
 /* ═══════════════════ 2 · DATASET ═══════════════════ */
 async function renderDataset() {
-  const [hd, bc] = await Promise.all([get("/api/eda/heart"), get("/api/eda/breast")]);
+  const [hd, bp] = await Promise.all([get("/api/eda/heart"), get("/api/eda/base_paper")]);
   const names = Object.fromEntries(Object.entries(hd.features).map(([k, v]) => [k, v.label]));
   names.disease = "Disease (label)";
 
@@ -282,18 +308,29 @@ async function renderDataset() {
   $("hdInvalid").innerHTML = `<thead><tr><th class="left">Feature</th><th>Invalid code</th><th>Rows</th></tr></thead><tbody>` +
     Object.entries(hd.invalid_codes).map(([k, v]) => `<tr><td class="left">${esc(names[k])} (<code>${k}</code>)</td><td>${v.codes.join(", ")}</td><td>${v.rows}</td></tr>`).join("") + "</tbody>";
 
-  $("bcStats").innerHTML = statCards([
-    [bc.n_samples, "Samples", bc.source, "blue"],
-    [bc.n_features, "Features", "all numeric", "teal"],
-    [bc.class_counts["0"], "Benign", `${pct(bc.class_counts["0"] / bc.n_samples)} of samples`, "healthy"],
-    [bc.class_counts["1"], "Malignant", `${pct(bc.class_counts["1"] / bc.n_samples)} of samples`, "disease"],
+  $("bpStats").innerHTML = statCards([
+    [bp.n_rows.toLocaleString(), "Rows in the file", bp.source, "blue"],
+    [bp.n_distinct, "Distinct patients", `${bp.n_duplicate_rows} rows are exact copies`, "amber"],
+    [bp.n_shared_with_ours, "Shared with our data", `of our ${bp.n_ours_distinct} distinct Cleveland records`, "teal"],
+    [bp.class_counts_distinct["1"], "Distinct with disease", `${bp.class_counts_distinct["0"]} without (same inverted labels)`, "disease"],
   ]);
-  $("bcBalance").innerHTML = balanceBar(bc.class_counts, bc.class_names);
+  const copies = Object.entries(bp.copies_per_patient);
+  const maxC = Math.max(...copies.map(([, c]) => c));
+  $("bpCopies").innerHTML = `<div class="hbars">${copies.map(([n, c]) => `
+    <div class="hbar-row"><span class="hbar-label">${n} cop${n === "1" ? "y" : "ies"}</span>
+      <span class="hbar-track"><span class="hbar-fill" style="width:${(c / maxC) * 100}%"></span></span>
+      <span class="hbar-val">${c} patients</span></div>`).join("")}</div>
+    <p class="note">Each distinct patient record appears this many times in the base paper's file.</p>`;
+  $("bpNote").innerHTML = `<p class="note">The base paper's file is not a larger dataset: it is <b>our ${bp.n_distinct} Cleveland
+    patients repeated</b> (identical values and labels), ${bp.n_rows.toLocaleString()} rows in total.</p>
+    <p class="note">If train and test are split by <i>row</i>, almost every test patient also sits in the training set,
+    so the model is partly tested on patients it has already memorised. The Encryption Cost &amp; Base Paper tab
+    measures how much that inflates accuracy.</p>`;
 
   document.querySelectorAll(".subtab").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll(".subtab").forEach((x) => x.classList.toggle("active", x === b));
     $("dsHeart").classList.toggle("hidden", b.dataset.ds !== "heart");
-    $("dsBreast").classList.toggle("hidden", b.dataset.ds !== "breast");
+    $("dsBase").classList.toggle("hidden", b.dataset.ds !== "base");
   }));
 }
 
@@ -395,26 +432,16 @@ async function renderModels() {
 }
 
 /* ═══════════════════ 4 · ENCRYPTED INFERENCE ═══════════════════ */
+let OV = null;   // overview payload, shared by the inference handlers
+
 async function renderFhe() {
   const [o, patients] = await Promise.all([get("/api/overview"), get("/api/patients")]);
+  OV = o;
 
-  $("fxModel").innerHTML = o.model_order.map((k) => [k, o.models[k]]).map(([k, v]) =>
-    `<option value="${k}">${esc(v.name)} — ${o.fhe_status[k].ready ? "encrypted ✓" : "plaintext only (FHE: Phase 2)"}</option>`).join("");
+  $("fxModel").innerHTML = o.model_order.map((k) =>
+    `<option value="${k}">${esc(o.models[k].name)} — ${o.fhe_status[k].ready
+      ? `encrypted ✓ (~${ms(o.fhe[k].real_exec_ms_per_sample)})` : "plaintext only"}</option>`).join("");
   $("fxPatient").innerHTML = patients.map((p) => `<option value="${p.id}">Patient #${p.id} · fold ${p.fold}</option>`).join("");
-
-  const f = o.fhe, dis = o.fhe_disagreements;
-  $("fxAggregate").innerHTML = `
-    <div class="agg">
-      <div class="agg-item tint-healthy"><b>${o.n_samples - f.n_disagree}/${o.n_samples}</b><span>same decision encrypted vs plaintext (${pct(f.agreement, 2)})</span></div>
-      <div class="agg-item"><b>${fix(f.max_abs_prob_diff, 3)}</b><span>largest probability shift from 8-bit quantisation</span></div>
-      <div class="agg-item tint-blue"><b>${ms(f.real_exec_ms_per_sample)}</b><span>mean genuine encrypted execution in the experiment</span></div>
-    </div>
-    ${dis.length ? `<p class="note">Disagreement${dis.length > 1 ? "s" : ""}: ${dis.map((d) =>
-      `<a href="#" class="jump" data-id="${d.id}">patient #${d.id}</a> (plaintext ${fix(d.plain)} → encrypted ${fix(d.enc)})`).join(", ")}
-      — a borderline probability where quantisation crosses the 0.5 threshold.</p>` : ""}`;
-  document.querySelectorAll(".jump").forEach((a) => a.addEventListener("click", (e) => {
-    e.preventDefault(); $("fxModel").value = "logreg"; $("fxPatient").value = a.dataset.id; loadPatient();
-  }));
 
   const scenarios = await get("/api/scenarios");
   $("fxScenarios").innerHTML = scenarios.map((s) => `
@@ -425,7 +452,8 @@ async function renderFhe() {
   document.querySelectorAll(".scenario").forEach((b) => b.addEventListener("click", async () => {
     const s = scenarios.find((x) => x.key === b.dataset.key);
     document.querySelectorAll(".scenario").forEach((x) => x.classList.toggle("active", x === b));
-    $("fxModel").value = "logreg";     // scenarios are defined on the encrypted model
+    $("fxModel").value = "logreg";     // scenarios are defined on the logistic regression
+    modelChanged();
     $("fxPatient").value = s.patient_id;
     await loadPatient({ keepScenario: true });
     const [lo, hi] = s.band;
@@ -437,14 +465,39 @@ async function renderFhe() {
   }));
 
   $("fxPatient").onchange = () => loadPatient();
-  $("fxModel").onchange = () => { clearScenario(); resetResult(); };
+  $("fxModel").onchange = () => { clearScenario(); resetResult(); modelChanged(); };
   $("fxRandom").onclick = () => {
     $("fxPatient").value = patients[Math.floor(Math.random() * patients.length)].id;
     loadPatient();
   };
   $("fxRun").onclick = runInference;
   $("fxPatient").value = patients[Math.floor(Math.random() * patients.length)].id;
+  modelChanged();
   loadPatient();
+}
+
+function modelChanged() {
+  const o = OV, key = $("fxModel").value, f = o.fhe[key], dis = o.fhe_disagreements[key];
+  const slow = f.real_exec_ms_per_sample > 2000;
+  $("fxModelNote").classList.toggle("hidden", !slow);
+  if (slow) {
+    $("fxModelNote").innerHTML = `Genuine encrypted execution takes ~${ms(f.real_exec_ms_per_sample)} per patient for this model
+      (${Math.round(f.cost_mean.pbs_count).toLocaleString()} bootstraps). The first run on a fold also loads
+      ~${bytes(f.cost_mean.evaluation_key_bytes)} of evaluation keys.`;
+  }
+  $("fxAggModel").textContent = "· " + o.models[key].name;
+  $("fxAggregate").innerHTML = `
+    <div class="agg">
+      <div class="agg-item tint-healthy"><b>${o.n_samples - f.n_disagree}/${o.n_samples}</b><span>same decision encrypted vs plaintext (${pct(f.agreement, 2)})</span></div>
+      <div class="agg-item"><b>${fix(f.max_abs_prob_diff, 3)}</b><span>largest probability shift from ${qset(f.settings)} quantisation</span></div>
+      <div class="agg-item tint-blue"><b>${ms(f.real_exec_ms_per_sample)}</b><span>mean genuine encrypted execution in the experiment</span></div>
+    </div>
+    ${dis.length ? `<p class="note">Disagreement${dis.length > 1 ? "s" : ""}: ${dis.map((d) =>
+      `<a href="#" class="jump" data-id="${d.id}">patient #${d.id}</a> (plaintext ${fix(d.plain)} → encrypted ${fix(d.enc)})`).join(", ")}
+      — borderline probabilities where quantisation crosses the 0.5 threshold.</p>` : `<p class="note">No disagreements: every encrypted decision matches plaintext.</p>`}`;
+  document.querySelectorAll(".jump").forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault(); $("fxPatient").value = a.dataset.id; loadPatient();
+  }));
 }
 
 function clearScenario() {
@@ -473,12 +526,14 @@ function resetResult() {
 }
 
 async function runInference() {
-  const btn = $("fxRun");
-  btn.disabled = true; btn.textContent = "Running…";
+  const btn = $("fxRun"), key = $("fxModel").value;
+  const expected = OV ? OV.fhe[key].real_exec_ms_per_sample : 0;
+  btn.disabled = true;
+  btn.textContent = expected > 2000 ? `Running encrypted… (~${ms(expected)})` : "Running…";
   resetResult();
   document.querySelectorAll(".flow-step").forEach((s) => s.classList.add("running"));
   try {
-    const r = await api(`/api/infer/${$("fxModel").value}`, { patient_id: +$("fxPatient").value });
+    const r = await api(`/api/infer/${key}`, { patient_id: +$("fxPatient").value });
     const p = r.plaintext, e = r.encrypted;
     setResult("fxPlain", p.label, `p(disease) = ${fix(p.prob)} · ${ms(p.latency_ms)}`);
 
@@ -493,17 +548,19 @@ async function runInference() {
       $("fxCipher").innerHTML = `
         <div><span class="k">server receives</span> ${e.ciphertext_bytes.toLocaleString()} bytes of ciphertext · <span class="k">sha256</span> ${e.ciphertext_sha256}…</div>
         <div class="hex">${e.ciphertext_sample.match(/.{2}/g).join(" ")} …</div>
-        <div><span class="k">server returns</span> ${e.result_ciphertext_bytes.toLocaleString()} bytes · fingerprint changes every run — encryption is randomised</div>`;
+        <div><span class="k">server returns</span> ${e.result_ciphertext_bytes.toLocaleString()} bytes · fingerprint changes every run — encryption is randomised</div>
+        ${e.setup_ms > 0 ? `<div><span class="k">one-off</span> ${ms(e.setup_ms)} to load this fold's circuit and generate its keys (not counted above)</div>` : ""}`;
       $("fxCipher").classList.remove("hidden");
       const correct = (e.label === r.truth.label);
+      const q = OV ? qset(OV.fhe[key].settings) : "low-bit";
       banner.className = "banner " + (e.agree ? "agree" : "disagree");
       banner.innerHTML = e.agree
         ? `✓ Predictions agree — ${e.label}. ${truth} (${correct ? "correct" : "incorrect"}).<small>The server produced this without seeing any of the patient's values.</small>`
-        : `⚠ Encrypted (${e.label}) and plaintext (${p.label}) disagree. ${truth}.<small>p(disease) is ${fix(p.prob)} in plaintext — close to 0.5, so 8-bit quantisation tips the decision.</small>`;
+        : `⚠ Encrypted (${e.label}) and plaintext (${p.label}) disagree. ${truth}.<small>p(disease) is ${fix(p.prob)} in plaintext — close to 0.5, so ${q} quantisation tips the decision.</small>`;
     } else {
       $("fxEnc").classList.add("off");
-      $("fxEnc").querySelector(".result-label").textContent = "Phase 2";
-      $("fxEnc").querySelector(".result-meta").textContent = "Not measured in current prototype";
+      $("fxEnc").querySelector(".result-label").textContent = "Unavailable";
+      $("fxEnc").querySelector(".result-meta").textContent = e.reason;
       banner.className = "banner info";
       banner.innerHTML = `${esc(r.model_name)}: plaintext prediction ${p.label}. ${truth} (${p.label === r.truth.label ? "correct" : "incorrect"}).<small>${esc(e.reason)}</small>`;
     }
@@ -523,6 +580,160 @@ function setResult(id, label, meta) {
   el.className = "result " + (label === "Disease" ? "disease" : "healthy");
   el.querySelector(".result-label").textContent = label;
   el.querySelector(".result-meta").textContent = meta;
+}
+
+/* ═══════════════════ 5 · PHASE 2 ═══════════════════ */
+async function renderPhase2() {
+  const d = await get("/api/phase2");
+  const order = d.model_order, n = 303;
+  const name = (k) => `<span class="model-name"><span class="swatch" style="background:${MODEL_COLOR[k]}"></span>${esc(d.models[k].name)}</span>`;
+
+  $("p2Accuracy").innerHTML = `<thead><tr><th>Model</th><th>Quantisation</th><th>Plaintext acc.</th><th>Encrypted acc.</th>
+    <th class="recall">Encrypted recall ★</th><th>Encrypted AUC</th><th>Same decision</th><th>Max prob. shift</th></tr></thead><tbody>` +
+    order.map((k) => {
+      const f = d.fhe[k], p = d.models[k].pooled;
+      return `<tr><td>${name(k)}</td><td>${qset(f.settings)}</td><td>${pct(p.accuracy)}</td><td><b>${pct(f.pooled.accuracy)}</b></td>
+        <td class="recall">${pct(f.pooled.recall)}</td><td>${fix(f.pooled.roc_auc)}</td>
+        <td>${n - f.n_disagree}/${n}</td><td>${fix(f.max_abs_prob_diff)}</td></tr>`;
+    }).join("") + "</tbody>";
+  $("p2AccuracyNote").textContent = "Encrypted predictions for all 303 patients come from FHE simulation (the circuit's exact integer arithmetic); " +
+    "genuine encryption was run on sample patients in every fold and matched the simulation. A small accuracy change in either direction " +
+    "comes from a few borderline patients crossing 0.5, not from encryption helping or hurting the model.";
+
+  const cx = (k) => {
+    const c = d.models[k].complexity;
+    return k === "xgboost" ? `${range(c.map((x) => x.n_trees))} trees` : `${range(c.map((x) => x.n_params))} params`;
+  };
+  $("p2Cost").innerHTML = `<thead><tr><th>Model</th><th>Size</th><th>Bootstraps (PBS) / patient</th><th>Max bit-width</th>
+    <th>Evaluation keys</th><th>Ciphertext in → out</th><th>Compile</th><th>Key generation</th><th>Encrypted time / patient</th><th>Peak extra memory</th></tr></thead><tbody>` +
+    order.map((k) => {
+      const f = d.fhe[k], c = f.cost_mean;
+      return `<tr><td>${name(k)}</td><td>${esc(cx(k))}</td><td>${Math.round(c.pbs_count).toLocaleString()}</td><td>${f.cost_range.max_bit_width[1]}</td>
+        <td>${bytes(c.evaluation_key_bytes)}</td><td>${bytes(c.input_ciphertext_bytes)} → ${bytes(c.output_ciphertext_bytes)}</td>
+        <td>${ms(f.compile_seconds_mean * 1000)}</td><td>${ms(f.keygen_seconds_mean * 1000)}</td>
+        <td><b>${ms(f.real_exec_ms_per_sample)}</b></td><td>${bytes(f.peak_extra_memory_mb_max * 1e6)}</td></tr>`;
+    }).join("") + "</tbody>";
+
+  $("p2Time").innerHTML = logBars(order.map((k) => ({
+    label: d.models[k].name, value: d.fhe[k].real_exec_ms_per_sample / 1000, color: MODEL_COLOR[k],
+    text: ms(d.fhe[k].real_exec_ms_per_sample),
+  })), { unit: "s" }) + `<p class="note">Genuine encrypted execution per patient on this laptop (CPU).</p>`;
+  $("p2Keys").innerHTML = logBars(order.map((k) => ({
+    label: d.models[k].name, value: d.fhe[k].cost_mean.evaluation_key_bytes, color: MODEL_COLOR[k],
+    text: d.fhe[k].cost_mean.evaluation_key_bytes ? bytes(d.fhe[k].cost_mean.evaluation_key_bytes) : "none (no bootstrapping)",
+  }))) + `<p class="note">Logistic regression needs no bootstrapping: only its weighted sum runs encrypted, and the client applies the sigmoid after decrypting.</p>`;
+
+  const q = d.study.quantisation;
+  $("p2Quant").innerHTML = `<thead><tr><th class="left">Model</th><th>Setting</th><th>Same decision</th><th>Max prob. shift</th><th>PBS</th><th>Max bits</th><th>Eval. keys</th></tr></thead><tbody>` +
+    Object.entries(q).map(([k, rows]) => rows.map((r) => `<tr class="${r.chosen ? "chosen" : ""}">
+      <td class="left">${esc(d.models[k].name)}</td><td>${qset(r.setting)}${r.chosen ? " ✓" : ""}</td><td>${r.n_agree}/${n}</td>
+      <td>${fix(r.max_abs_prob_diff)}</td><td>${Math.round(r.pbs_mean).toLocaleString()}</td><td>${r.max_bit_width}</td>
+      <td>${bytes(r.evaluation_key_bytes_mean)}</td></tr>`).join("")).join("") + "</tbody>";
+
+  const a = d.study.activation;
+  $("p2Act").innerHTML = `<thead><tr><th class="left">Activation</th><th>Plaintext acc.</th><th class="recall">Recall ★</th><th>AUC</th><th>Encrypted acc.</th><th>PBS</th></tr></thead><tbody>` +
+    [["ReLU (used)", a.relu], ["x² (CryptoNets-style)", a.square]].map(([l, r]) => `<tr><td class="left">${l}</td>
+      <td>${pct(r.pooled.accuracy)}</td><td class="recall">${pct(r.pooled.recall)}</td><td>${fix(r.pooled.roc_auc)}</td>
+      <td>${pct(r.encrypted.accuracy)}</td><td>${Math.round(r.pbs_mean)}</td></tr>`).join("") + "</tbody>";
+  $("p2ActNote").textContent = "CKKS-style schemes can only add and multiply, so they need a polynomial such as x² in place of ReLU. " +
+    "TFHE evaluates ReLU exactly as a table lookup, so the x² swap is not required here, and it does not make the circuit cheaper: " +
+    "both activations cost one bootstrap per hidden unit.";
+
+  const b = d.base_paper;
+  if (!b) { $("p2Base").innerHTML = ""; $("p2BaseNote").textContent = "Run scripts/run_experiments.sh to produce results/base_paper.json."; return; }
+  const rep = b.base_paper_reported;
+  const row = (label, lr, enc, xgb, mlp, leak, cls = "") => `<tr class="${cls}"><td class="left">${label}</td><td>${lr}</td><td>${enc}</td><td>${xgb}</td><td>${mlp}</td><td>${leak}</td></tr>`;
+  const ours = (r) => [pct(r.models.logreg.accuracy), pct(r.fhe_logreg.pooled.accuracy), pct(r.models.xgboost.accuracy), pct(r.models.mlp.accuracy),
+    pct(r.test_rows_with_copy_in_training_pct, 0)];
+  $("p2Base").innerHTML = `<thead><tr><th class="left">Evaluation (accuracy)</th><th>Logistic Reg.</th><th>Encrypted LR</th><th>XGBoost</th><th>MLP</th>
+    <th>Test rows also in training</th></tr></thead><tbody>` +
+    row(`Base paper, as reported <span class="muted">· ${esc(rep.scheme)}, split ${esc(rep.split)}</span>`, pct(rep.lr_plaintext_accuracy, 0),
+      pct(rep.lr_encrypted_accuracy.poly_modulus_8192, 0), "—", "—", "?") +
+    row("Ours · split by <b>row</b> (copies leak)", ...ours(b.row_split), "warn-row") +
+    row("Ours · split by <b>patient</b> (no leakage)", ...ours(b.patient_split), "chosen") +
+    "</tbody>";
+  $("p2BaseNote").innerHTML = `On the base paper's own file, our logistic regression matches its reported accuracy, and our encrypted version
+    matches plaintext more closely (${pct(b.patient_split.fhe_logreg.agreement, 1)} same decisions). With a row split,
+    ${pct(b.row_split.test_rows_with_copy_in_training_pct, 0)} of test rows have an identical copy in training, so flexible models look much better
+    than they are: XGBoost and the MLP gain ${(100 * (b.row_split.models.xgboost.accuracy - b.patient_split.models.xgboost.accuracy)).toFixed(0)} and
+    ${(100 * (b.row_split.models.mlp.accuracy - b.patient_split.models.mlp.accuracy)).toFixed(0)} points. Splitting by patient removes the leak,
+    and the result agrees with our main 303-patient study: added complexity does not help.`;
+}
+
+/* ═══════════════════ 6 · ELASTIC LEARNER ═══════════════════ */
+async function renderElastic() {
+  const [e, res] = await Promise.all([get("/api/elastic"), get("/api/results")]);
+  const order = e.order, R = e.rows;
+  const name = (k) => `<span class="model-name"><span class="swatch" style="background:${MODEL_COLOR[k]}"></span>${esc(R[k].name)}</span>`;
+
+  $("elHow").innerHTML = [
+    ["Base predictions", "LR, XGBoost and MLP each give p(disease)"],
+    ["No leakage", "for training patients, from models that never saw them (inner 5-fold)"],
+    ["Elastic-net learner", "logistic regression on the 3 logits · L1 can drop a model, L2 keeps weights stable"],
+    ["Tuned per fold", `C and L1 ratio chosen by inner CV on F2 (${e.elastic.grid.C.length * e.elastic.grid.l1_ratio.length} combinations)`],
+    ["Final answer", "one combined probability per patient"],
+  ].map(([t, s]) => `<li><strong>${t}</strong><span>${s}</span></li>`).join("");
+
+  const rec = e.recommendation, rk = rec.model;
+  $("elRecommend").innerHTML = `<p class="eyebrow ok"><span class="dot"></span>Recommended model</p>
+    <div class="rec-name">${name(rk)}</div>
+    <div class="agg">
+      <div class="agg-item tint-healthy"><b>${fix(R[rk].pooled.f2)}</b><span>F2 (recall-weighted)</span></div>
+      <div class="agg-item"><b>${pct(R[rk].pooled.recall)}</b><span>recall</span></div>
+      <div class="agg-item tint-blue"><b>${ms(R[rk].encrypted_ms)}</b><span>per patient, encrypted</span></div>
+    </div>
+    <p class="note"><b>Rule:</b> ${esc(rec.rule)}</p>
+    <p class="note">Tied on F2: ${rec.tied_on_f2.map((k) => esc(R[k].name)).join(", ")}.
+    ${rk !== "elastic" && rec.tied_on_f2.includes("elastic") ? "Combining the models does not beat the best single one, and it would need every encrypted circuit." : ""}</p>`;
+
+  const cols = [["accuracy", "Accuracy", pct], ["precision", "Precision", pct], ["recall", "Recall ★", pct],
+    ["f1", "F1", pct], ["f2", "F2 ★", fix], ["roc_auc", "ROC-AUC", fix]];
+  const best = Object.fromEntries(cols.map(([k]) => [k, Math.max(...order.map((m) => R[m].pooled[k]))]));
+  const fastest = Math.min(...order.map((m) => R[m].encrypted_ms));
+  $("elBoard").innerHTML = `<thead><tr><th>Model</th>${cols.map(([, l]) => `<th>${l}</th>`).join("")}<th>Encrypted time</th></tr></thead><tbody>` +
+    order.map((m) => `<tr class="${m === "elastic" ? "chosen" : ""}"><td>${name(m)}${m === rk ? " 👑" : ""}</td>` +
+      cols.map(([k, , f]) => `<td class="${R[m].pooled[k] === best[k] ? "best" : ""}">${f(R[m].pooled[k])}</td>`).join("") +
+      `<td class="${R[m].encrypted_ms === fastest ? "best" : ""}">${ms(R[m].encrypted_ms)}</td></tr>`).join("") + "</tbody>";
+
+  $("elBest").innerHTML = Object.values(e.best).map((b) => `
+    <div class="best-card" style="--c:${MODEL_COLOR[b.model]}">
+      <span class="best-crit">${esc(b.label)}</span>
+      <span class="best-model">${esc(R[b.model].name)}</span>
+      <span class="best-val">${b.label.startsWith("Encrypted") ? ms(b.value) : b.label.startsWith("ROC") || b.label.startsWith("F2") ? fix(b.value) : pct(b.value)}
+        <small>${b.direction === "lower" ? "lowest" : "highest"}</small></span>
+    </div>`).join("");
+
+  // Weight chart: one group per fold, one bar per base model (can be negative).
+  const base = order.filter((m) => m !== "elastic"), F = e.elastic.folds;
+  const w = 520, h = 260, m = { t: 14, r: 10, b: 36, l: 44 };
+  const all = F.flatMap((f) => base.map((k) => f.weights[k]));
+  const top = Math.max(0.5, ...all), bot = Math.min(0, ...all);
+  const y = scale(bot, top, h - m.b, m.t), gw = (w - m.l - m.r) / F.length, bw = Math.min(22, gw / 4.5);
+  let svg = "";
+  [bot, 0, top / 2, top].forEach((v) => (svg += `<line x1="${m.l}" x2="${w - m.r}" y1="${y(v)}" y2="${y(v)}" style="stroke:${v === 0 ? "var(--chart-axis)" : "var(--chart-grid)"}"/>
+    <text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(2)}</text>`));
+  F.forEach((f, i) => {
+    const cx = m.l + gw * i + gw / 2;
+    base.forEach((k, j) => {
+      const v = f.weights[k], bx = cx + (j - 1.5) * bw + 1;
+      svg += `<rect x="${bx}" y="${Math.min(y(v), y(0))}" width="${bw - 2}" height="${Math.max(1, Math.abs(y(v) - y(0)))}" rx="3"
+        style="fill:${MODEL_COLOR[k]}" data-tip="Fold ${i + 1} · ${R[k].name}: ${v.toFixed(3)}"/>`;
+    });
+    svg += `<text x="${cx}" y="${h - m.b + 16}" text-anchor="middle">fold ${i + 1}</text>`;
+  });
+  $("elWeights").innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img" style="max-width:${w * 1.2}px">${svg}</svg>` +
+    legend(base.map((k) => ({ color: MODEL_COLOR[k], label: R[k].name })));
+  const dropped = F.flatMap((f) => f.dropped.map((k) => `${R[k].name} (fold ${f.fold + 1})`));
+  $("elWeightsNote").textContent = `A larger weight means the learner trusts that model's opinion more. ` +
+    (dropped.length ? `Dropped by the L1 penalty: ${dropped.join(", ")}. ` : "No model was dropped outright in any fold. ") +
+    `The weights change a lot from fold to fold, another sign that no model is reliably better than the others on 303 patients.`;
+
+  const M = res.metrics.models;
+  $("elRoc").innerHTML = lineChart([
+    ...base.map((k) => ({ x: M[k].roc.fpr, y: M[k].roc.tpr, color: MODEL_COLOR[k], name: R[k].name, width: 1.6, dash: "4 3" })),
+    { x: e.elastic.roc.fpr, y: e.elastic.roc.tpr, color: MODEL_COLOR.elastic, name: "Elastic Learner", width: 2.8 },
+  ], { square: true, diagonal: true, xLabel: "False positive rate", yLabel: "True positive rate (recall)", width: 460, height: 340 }) +
+    legend(order.map((k) => ({ color: MODEL_COLOR[k], label: `${R[k].name} · AUC ${fix(R[k].pooled.roc_auc)}` })));
 }
 
 show("overview");

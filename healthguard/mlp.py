@@ -5,6 +5,10 @@ code as the other two models.
 
 Architecture: n_in → 16 → 8 → 1, where n_in is read from the data at fit time
 (the width after one-hot encoding), never hardcoded.
+
+The hidden activation is ReLU by default. `activation="square"` swaps it for
+x², the polynomial activation CKKS-style schemes need (CryptoNets; Zimerman
+et al., 2024); the Phase-2 activation study compares the two.
 """
 
 import copy
@@ -16,12 +20,20 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.model_selection import train_test_split
 
 
+class _Square(nn.Module):
+    def forward(self, x):
+        return x * x
+
+
+ACTIVATIONS = {"relu": nn.ReLU, "square": _Square}
+
+
 class _Net(nn.Module):
-    def __init__(self, n_in, hidden, dropout):
+    def __init__(self, n_in, hidden, dropout, activation="relu"):
         super().__init__()
         layers, prev = [], n_in
         for h in hidden:
-            layers += [nn.Linear(prev, h), nn.ReLU(), nn.Dropout(dropout)]
+            layers += [nn.Linear(prev, h), ACTIVATIONS[activation](), nn.Dropout(dropout)]
             prev = h
         layers.append(nn.Linear(prev, 1))
         self.net = nn.Sequential(*layers)
@@ -39,7 +51,8 @@ class MLPClassifier(BaseEstimator, ClassifierMixin):
     """
 
     def __init__(self, hidden=(16, 8), dropout=0.3, lr=1e-3, batch_size=32,
-                 max_epochs=300, patience=25, val_fraction=0.15, random_state=42):
+                 max_epochs=300, patience=25, val_fraction=0.15, activation="relu",
+                 random_state=42):
         self.hidden = hidden
         self.dropout = dropout
         self.lr = lr
@@ -47,6 +60,7 @@ class MLPClassifier(BaseEstimator, ClassifierMixin):
         self.max_epochs = max_epochs
         self.patience = patience
         self.val_fraction = val_fraction
+        self.activation = activation
         self.random_state = random_state
 
     # ── training ─────────────────────────────────────────────────────────
@@ -67,7 +81,7 @@ class MLPClassifier(BaseEstimator, ClassifierMixin):
 
         self.n_features_in_ = X.shape[1]
         self.classes_ = np.array([0, 1])
-        self.net_ = _Net(self.n_features_in_, self.hidden, self.dropout)
+        self.net_ = _Net(self.n_features_in_, self.hidden, self.dropout, self.activation)
 
         # Class weighting (synopsis §4.3): up-weight the positive class by the
         # negative/positive ratio of the training rows.

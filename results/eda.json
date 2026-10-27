@@ -793,21 +793,30 @@
    ]
   }
  },
- "breast": {
-  "name": "Breast Cancer Wisconsin (Diagnostic)",
-  "role": "secondary",
-  "source": "UCI via Kaggle (uciml/breast-cancer-wisconsin-data)",
-  "n_samples": 569,
-  "n_features": 30,
+ "base_paper": {
+  "name": "Heart Disease (base-paper copy)",
+  "source": "Kaggle johnsmith88/heart-disease-dataset, as used by Naresh & Reddi (2025)",
+  "n_rows": 1025,
+  "n_distinct": 302,
+  "n_duplicate_rows": 723,
+  "n_shared_with_ours": 302,
+  "n_ours_distinct": 302,
+  "copies_per_patient": {
+   "3": 187,
+   "4": 114,
+   "8": 1
+  },
+  "class_counts_rows": {
+   "0": 526,
+   "1": 499
+  },
+  "class_counts_distinct": {
+   "0": 164,
+   "1": 138
+  },
   "class_names": {
-   "0": "Benign",
-   "1": "Malignant"
-  },
-  "class_counts": {
-   "0": 357,
-   "1": 212
-  },
-  "missing_values": 0,
-  "status": "Dataset available \u00b7 full experiment in Phase 2"
+   "0": "No Disease",
+   "1": "Disease"
+  }
  }
 }

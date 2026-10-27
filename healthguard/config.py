@@ -9,7 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA_RAW = ROOT / "data" / "raw"
 HEART_CSV = DATA_RAW / "heart_disease.csv"
-BREAST_CSV = DATA_RAW / "breast_cancer.csv"
+# The 1,025-row Kaggle file the base paper used (johnsmith88/heart-disease-dataset).
+BASE_PAPER_CSV = DATA_RAW / "heart_disease_base_paper_1025.csv"
 
 RESULTS = ROOT / "results"
 MODELS_DIR = RESULTS / "models"
@@ -69,9 +70,24 @@ MLP_CONFIG = {
 }
 
 # ── FHE ──────────────────────────────────────────────────────────────────
-FHE_N_BITS = 8
-FHE_REAL_EXEC_SAMPLES = 3     # rows per fold timed with genuine encrypted execution
-ENABLE_XGB_FHE = False        # P3: only switched on if it compiles first try
+# Quantisation per model. Each is the cheapest setting in the quantisation
+# study (FHE_QUANT_STUDY) that keeps every plaintext decision unchanged.
+FHE_SETTINGS = {
+    "logreg":  {"n_bits": 8},
+    "xgboost": {"n_bits": 7},
+    "mlp":     {"n_bits": 7, "rounding_threshold_bits": 6},
+}
+# Rows per fold timed with genuine encrypted execution. Every row is also run
+# through FHE simulation (the circuit's exact integer arithmetic), which is
+# how the 303 encrypted predictions are obtained in reasonable time.
+FHE_REAL_EXEC_SAMPLES = {"logreg": 3, "xgboost": 1, "mlp": 1}
+
+# Settings compared in the quantisation study (simulation only).
+FHE_QUANT_STUDY = {
+    "xgboost": [{"n_bits": 5}, {"n_bits": 6}, {"n_bits": 7}],
+    "mlp": [{"n_bits": 6}, {"n_bits": 7, "rounding_threshold_bits": 6},
+            {"n_bits": 8, "rounding_threshold_bits": 6}],
+}
 
 # ── Demo scenarios (Encrypted Inference page) ────────────────────────────
 # Each scenario loads a *real* patient, chosen by the logistic regression's

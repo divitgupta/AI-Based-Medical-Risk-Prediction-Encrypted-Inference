@@ -1,4 +1,4 @@
-# Demo walkthrough: Working Prototype · Phase 1
+# Demo walkthrough: Working Prototype · Phase 1 + Phase 2
 
 ## Before you start (1 minute)
 
@@ -9,8 +9,9 @@ lsof -ti:5001 | xargs kill -9 2>/dev/null; ./scripts/run_app.sh
 Wait for these lines in the terminal:
 
 ```
-Loaded 5 precompiled FHE bundles (no compilation) in 0.8s
-Warmed up 5 FHE circuits in …
+Loaded 5 precompiled logreg FHE bundles (no compilation) in 0.7s
+Warmed up 5 logreg FHE circuits in …
+FHE bundles for xgboost, mlp load on first use (large evaluation keys)
 Serving on http://localhost:5001
 ```
 
@@ -37,8 +38,8 @@ fonts.
   → Models → Evaluate → FHE.
 - Headline results: logistic regression is best on accuracy (85.1%) and AUC
   (0.915).
-- Point at the **Project status** card. It is explicit about what is done and
-  what is Phase 2, which shows the scope is under control.
+- Point at the two **status** cards: what Phase 1 delivered and what Phase 2
+  added. The encrypted-inference card now lists all three models.
 
 ## 2 · Dataset (2 min)
 
@@ -58,8 +59,8 @@ fonts.
   > Every clinical sign in this table agrees, and 165 ones matches the 164
   > healthy patients in the original UCI data. Without this fix, 'recall'
   > would measure how well we find healthy people."*
-- **Breast Cancer tab:** the dataset is integrated, with the full experiment
-  in Phase 2. No model numbers are shown for it, on purpose.
+- **Base-paper copy tab:** the base paper's 1,025-row file is our 302
+  patients repeated 1–4 times. Set this up here; the payoff is on the last tab.
 
 ## 3 · Model Comparison (3 min), the core of the demo
 
@@ -114,15 +115,53 @@ encrypted inference immediately.
    > *"This is the one disagreement. Plaintext says 0.533, just over the
    > threshold; 8-bit quantisation gives 0.483. It's a borderline case, and we
    > report it rather than claim 100%."*
-5. Switch the model to **MLP**. The FHE card reads *Phase 2 · Not measured*.
-   We never show numbers we haven't measured.
+5. Switch the model to **MLP** and run any patient (~5 s, plus ~8 s the first
+   time a fold's keys are generated). Then **XGBoost** (~30–60 s; start it and
+   keep talking). Same flow, same agreement check, much higher cost.
+   > *"Encryption works for all three models. What changes is the price."*
+
+## 5 · Encryption Cost & Base Paper (3 min), Phase 2
+
+- **Accuracy table:** every model keeps its accuracy encrypted. XGBoost and
+  the MLP agree with plaintext on 303/303 patients.
+- **Cost table and the two log-scale charts:** LR 12 ms and no keys; MLP
+  5 s and 2.6 GB of keys; XGBoost 50 s and 38,000 bootstraps per patient.
+  > *"Accuracy didn't grow with complexity, but encryption cost grew by more
+  > than three orders of magnitude. On this data the simple model wins twice."*
+- **Quantisation study:** fewer bits are cheaper but drift further from
+  plaintext. We picked the cheapest setting that changes no decision.
+- **Activation study:** x² (what CKKS needs) costs the same as ReLU under
+  TFHE and is slightly less accurate, so we keep ReLU.
+- **Base paper table (strongest Phase-2 point):**
+  > *"On the base paper's own file our LR gets 85.9%, matching their 85%, and
+  > our encrypted LR loses nothing. But 99% of test rows have an identical
+  > copy in training if you split by row: XGBoost then scores 99.2%. Split by
+  > patient and it drops to 78.1%. Duplicates make complex models look far
+  > better than they are."*
+
+## 6 · Elastic Learner (2 min)
+
+- **How it works card:** a stacking learner. An elastic-net logistic
+  regression combines the three models' predictions and learns how much to
+  trust each; the L1 part can switch a model off.
+- **Leaderboard and verdicts:** LR wins F2, accuracy, precision, AUC and
+  encrypted time; the MLP has the best recall by one patient.
+- **Recommended model card:** LR, MLP and the Elastic Learner tie on F2
+  (within 0.01), so the rule picks the cheapest to encrypt: **logistic
+  regression**.
+  > *"Even a learner built to combine all three can't beat the simplest model
+  > here, and it would need all three encrypted circuits. Third time the data
+  > gives the same answer."*
+- **Weights chart:** the trust given to each model jumps between folds. No
+  model is reliably better.
 
 ## Closing line
 
-> Phase 1 delivers the complete ML comparison with a working encrypted path
-> for the linear model. Phase 2 extends encryption to XGBoost and the MLP,
-> measures memory and bootstrapping cost, and runs the same study on Breast
-> Cancer.
+> All three models now run under encryption with no loss of accuracy. The
+> cost of that privacy rises from milliseconds to nearly a minute per patient
+> as models get more complex, while accuracy does not rise at all. For this
+> problem, the simplest model is both the most accurate and the cheapest to
+> keep private.
 
 ---
 
@@ -155,11 +194,37 @@ angina, more ST depression, a lower max heart rate. The CSV's `target = 0`
 group had all of those. The class counts matched the original UCI absence
 counts.
 
-**Why is the MLP not encrypted yet?**
-The prototype first validates the complete encrypted pipeline with the linear
-model. MLP encryption needs feasibility work on the non-linear activation
-(the synopsis proposes x², per CryptoNets) and on circuit compilation. That's
-Phase 2.
+**Why didn't you use x² for the MLP, as the synopsis planned?**
+x² is needed by schemes like CKKS that can only add and multiply. Concrete ML
+uses TFHE, which computes ReLU exactly as a table lookup during bootstrapping.
+We tested x² anyway: it costs the same (250 vs 246 bootstraps) and is slightly
+less accurate (82.5% vs 83.5%), so ReLU stays.
+
+**Why does logistic regression need zero bootstraps?**
+Only its weighted sum is computed encrypted, which needs additions and
+multiplications by plaintext weights, no bootstrapping. The client applies
+the sigmoid after decrypting the score.
+
+**Why is XGBoost so slow encrypted?**
+Every comparison in every tree is a programmable bootstrap: about 38,000 per
+patient on average (20,000–66,000 depending on the fold's tree count). Each
+takes about a millisecond on a CPU.
+
+**Are the 303 encrypted predictions real encryption?**
+They come from FHE simulation, which runs the circuit's exact integer
+arithmetic without the cryptography. Genuine encrypted runs on sample patients
+in every fold matched the simulation exactly, and the website runs genuine
+encryption live.
+
+**What is the Elastic Learner, and is it leakage-free?**
+Stacking with an elastic-net logistic regression as the meta-learner. Inside
+each outer fold, the base models are refitted on inner folds of the training
+rows, so the meta-learner learns only from predictions on patients those
+models didn't see. Test patients are never used to fit anything that scores them.
+
+**How did you get the base paper's dataset?**
+Downloaded from Kaggle (`johnsmith88/heart-disease-dataset`), the source the
+paper cites. All 1,025 rows are copies of our 302 distinct Cleveland records.
 
 **Why isn't the MLP the best model, as the synopsis expected?**
 303 patients is too few for a network to show an advantage. Reporting that

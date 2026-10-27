@@ -2,7 +2,7 @@
 Dataset loading and the cross-validation scheme.
 
 Label convention everywhere in this project: 1 = the finding we must not miss
-(disease present / malignant), 0 = its absence. Recall therefore always means
+(disease present), 0 = its absence. Recall therefore always means
 sensitivity to disease.
 """
 
@@ -43,17 +43,29 @@ def load_heart():
     return X, y
 
 
-def load_breast():
+def load_base_paper():
     """
-    Load Breast Cancer Wisconsin for the dataset preview (Phase 2 experiment).
+    Load the 1,025-row Kaggle file used by the base paper (Naresh & Reddi,
+    2025; johnsmith88/heart-disease-dataset), with the same two corrections.
 
-    The CSV codes 1 = benign; we flip it so 1 = malignant, matching the
-    project-wide convention.
+    Returns
+    -------
+    X : DataFrame, 1025 × 13
+    y : ndarray of int, 1 = Disease
+    group : ndarray of int, one id per *distinct* patient record
+
+    The file holds only 302 distinct records, each repeated 1–4 times, and
+    those 302 are exactly the records of our Cleveland file (same values,
+    same inverted labels). `group` lets cross-validation keep every copy of a
+    patient on the same side of a split.
     """
-    df = pd.read_csv(config.BREAST_CSV)
+    df = pd.read_csv(config.BASE_PAPER_CSV)
+    group = df.groupby(list(df.columns), sort=False).ngroup().to_numpy()
     y = (1 - df["target"]).astype(int).to_numpy()
-    X = df.drop(columns=["target"])
-    return X, y
+    X = df.drop(columns=["target"]).astype(float)
+    for col, bad in config.HD_INVALID_CODES.items():
+        X.loc[X[col].isin(bad), col] = np.nan
+    return X, y, group
 
 
 def folds(y):

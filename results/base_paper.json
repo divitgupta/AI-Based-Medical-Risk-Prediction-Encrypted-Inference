@@ -1,0 +1,161 @@
+{
+ "dataset": {
+  "rows": 1025,
+  "distinct_patients": 302,
+  "positive_rows": 499
+ },
+ "base_paper_reported": {
+  "citation": "Naresh & Reddi (2025), Journal of Big Data 12:52",
+  "scheme": "CKKS (TenSEAL)",
+  "lr_plaintext_accuracy": 0.85,
+  "lr_encrypted_accuracy": {
+   "poly_modulus_4096": 0.84,
+   "poly_modulus_8192": 0.84
+  },
+  "svm_encrypted_score": {
+   "poly_modulus_4096": 0.67,
+   "poly_modulus_8192": 0.79
+  },
+  "lr_encrypted_score_vs_svm": {
+   "poly_modulus_4096": 0.817,
+   "poly_modulus_8192": 0.85
+  },
+  "split": "not described in the paper"
+ },
+ "row_split": {
+  "test_rows_with_copy_in_training": 1015,
+  "test_rows_with_copy_in_training_pct": 0.9902439024390244,
+  "models": {
+   "logreg": {
+    "accuracy": 0.8585365853658536,
+    "precision": 0.8672199170124482,
+    "recall": 0.8376753507014028,
+    "f1": 0.8521916411824668,
+    "roc_auc": 0.93058741056257,
+    "specificity": 0.8783269961977186,
+    "confusion": {
+     "tn": 462,
+     "fp": 64,
+     "fn": 81,
+     "tp": 418
+    }
+   },
+   "xgboost": {
+    "accuracy": 0.9921951219512195,
+    "precision": 0.9842209072978304,
+    "recall": 1.0,
+    "f1": 0.9920477137176938,
+    "roc_auc": 1.0,
+    "specificity": 0.9847908745247148,
+    "confusion": {
+     "tn": 518,
+     "fp": 8,
+     "fn": 0,
+     "tp": 499
+    }
+   },
+   "mlp": {
+    "accuracy": 0.9619512195121951,
+    "precision": 0.9655870445344129,
+    "recall": 0.9559118236472945,
+    "f1": 0.9607250755287009,
+    "roc_auc": 0.9865053300517385,
+    "specificity": 0.967680608365019,
+    "confusion": {
+     "tn": 509,
+     "fp": 17,
+     "fn": 22,
+     "tp": 477
+    }
+   }
+  },
+  "fhe_logreg": {
+   "pooled": {
+    "accuracy": 0.8585365853658536,
+    "precision": 0.8657024793388429,
+    "recall": 0.8396793587174348,
+    "f1": 0.8524923702950152,
+    "roc_auc": 0.9306178897719394,
+    "specificity": 0.876425855513308,
+    "confusion": {
+     "tn": 461,
+     "fp": 65,
+     "fn": 80,
+     "tp": 419
+    }
+   },
+   "agreement": 0.9980487804878049
+  }
+ },
+ "patient_split": {
+  "test_rows_with_copy_in_training": 0,
+  "test_rows_with_copy_in_training_pct": 0.0,
+  "models": {
+   "logreg": {
+    "accuracy": 0.8351219512195122,
+    "precision": 0.8381147540983607,
+    "recall": 0.8196392785571143,
+    "f1": 0.828774062816616,
+    "roc_auc": 0.906322150003429,
+    "specificity": 0.8498098859315589,
+    "confusion": {
+     "tn": 447,
+     "fp": 79,
+     "fn": 90,
+     "tp": 409
+    }
+   },
+   "xgboost": {
+    "accuracy": 0.7814634146341464,
+    "precision": 0.7944325481798715,
+    "recall": 0.7434869739478958,
+    "f1": 0.7681159420289855,
+    "roc_auc": 0.8739913286649343,
+    "specificity": 0.8174904942965779,
+    "confusion": {
+     "tn": 430,
+     "fp": 96,
+     "fn": 128,
+     "tp": 371
+    }
+   },
+   "mlp": {
+    "accuracy": 0.8097560975609757,
+    "precision": 0.8015873015873016,
+    "recall": 0.8096192384769539,
+    "f1": 0.8055832502492523,
+    "roc_auc": 0.8621539657261292,
+    "specificity": 0.8098859315589354,
+    "confusion": {
+     "tn": 426,
+     "fp": 100,
+     "fn": 95,
+     "tp": 404
+    }
+   }
+  },
+  "fhe_logreg": {
+   "pooled": {
+    "accuracy": 0.8351219512195122,
+    "precision": 0.8381147540983607,
+    "recall": 0.8196392785571143,
+    "f1": 0.828774062816616,
+    "roc_auc": 0.9064478767420774,
+    "specificity": 0.8498098859315589,
+    "confusion": {
+     "tn": 447,
+     "fp": 79,
+     "fn": 90,
+     "tp": 409
+    }
+   },
+   "agreement": 1.0
+  }
+ },
+ "quick": false,
+ "meta": {
+  "generated": "2026-10-24T16:49:38",
+  "runtime_seconds": 46.431428125011735,
+  "seed": 42
+ }
+}

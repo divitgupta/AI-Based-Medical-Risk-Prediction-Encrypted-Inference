@@ -124,7 +124,7 @@
       "C": 0.1
      },
      "inner_cv_f2": 0.8288775547178189,
-     "fit_seconds": 1.7373450410086662,
+     "fit_seconds": 1.519001999986358,
      "complexity": {
       "kind": "parameters",
       "n_params": 26,
@@ -138,7 +138,7 @@
       "C": 0.1
      },
      "inner_cv_f2": 0.8298068871838484,
-     "fit_seconds": 0.05689162504859269,
+     "fit_seconds": 0.07622583297779784,
      "complexity": {
       "kind": "parameters",
       "n_params": 26,
@@ -152,7 +152,7 @@
       "C": 0.1
      },
      "inner_cv_f2": 0.8519236709603681,
-     "fit_seconds": 0.04624554212205112,
+     "fit_seconds": 0.09336075000464916,
      "complexity": {
       "kind": "parameters",
       "n_params": 26,
@@ -166,7 +166,7 @@
       "C": 0.1
      },
      "inner_cv_f2": 0.8176561360096619,
-     "fit_seconds": 0.04457862488925457,
+     "fit_seconds": 0.06455650000134483,
      "complexity": {
       "kind": "parameters",
       "n_params": 26,
@@ -180,7 +180,7 @@
       "C": 0.1
      },
      "inner_cv_f2": 0.8221879638509156,
-     "fit_seconds": 0.05740529205650091,
+     "fit_seconds": 0.0737816669861786,
      "complexity": {
       "kind": "parameters",
       "n_params": 26,
@@ -435,7 +435,7 @@
       "n_estimators": 300
      },
      "inner_cv_f2": 0.7978793914384162,
-     "fit_seconds": 0.53453891701065,
+     "fit_seconds": 0.5119660419877619,
      "complexity": {
       "kind": "trees",
       "n_trees": 300,
@@ -454,7 +454,7 @@
       "n_estimators": 300
      },
      "inner_cv_f2": 0.8110712229713692,
-     "fit_seconds": 0.405152500141412,
+     "fit_seconds": 0.4503292079898529,
      "complexity": {
       "kind": "trees",
       "n_trees": 300,
@@ -473,7 +473,7 @@
       "n_estimators": 100
      },
      "inner_cv_f2": 0.8493571433938406,
-     "fit_seconds": 0.39238341618329287,
+     "fit_seconds": 0.4169701670180075,
      "complexity": {
       "kind": "trees",
       "n_trees": 100,
@@ -492,7 +492,7 @@
       "n_estimators": 100
      },
      "inner_cv_f2": 0.7739898271004673,
-     "fit_seconds": 0.41976512502878904,
+     "fit_seconds": 0.41272604203550145,
      "complexity": {
       "kind": "trees",
       "n_trees": 100,
@@ -511,7 +511,7 @@
       "n_estimators": 300
      },
      "inner_cv_f2": 0.7927021453595323,
-     "fit_seconds": 0.4378512501716614,
+     "fit_seconds": 0.45474974997341633,
      "complexity": {
       "kind": "trees",
       "n_trees": 300,
@@ -827,7 +827,7 @@
       "epochs_run": 67
      },
      "inner_cv_f2": null,
-     "fit_seconds": 0.47705762507393956,
+     "fit_seconds": 0.4111379579990171,
      "complexity": {
       "kind": "parameters",
       "n_params": 561,
@@ -851,7 +851,7 @@
       "epochs_run": 76
      },
      "inner_cv_f2": null,
-     "fit_seconds": 0.16348712495528162,
+     "fit_seconds": 0.1400857919943519,
      "complexity": {
       "kind": "parameters",
       "n_params": 561,
@@ -875,7 +875,7 @@
       "epochs_run": 143
      },
      "inner_cv_f2": null,
-     "fit_seconds": 0.24024291709065437,
+     "fit_seconds": 0.2689127500052564,
      "complexity": {
       "kind": "parameters",
       "n_params": 561,
@@ -899,7 +899,7 @@
       "epochs_run": 96
      },
      "inner_cv_f2": null,
-     "fit_seconds": 0.17760533303953707,
+     "fit_seconds": 0.19575612497283146,
      "complexity": {
       "kind": "parameters",
       "n_params": 561,
@@ -923,7 +923,7 @@
       "epochs_run": 69
      },
      "inner_cv_f2": null,
-     "fit_seconds": 0.13032829109579325,
+     "fit_seconds": 0.1553362919948995,
      "complexity": {
       "kind": "parameters",
       "n_params": 561,
@@ -1096,6 +1096,9 @@
  },
  "fhe": {
   "logreg": {
+   "settings": {
+    "n_bits": 8
+   },
    "n_bits": 8,
    "pooled": {
     "accuracy": 0.8547854785478548,
@@ -1117,59 +1120,651 @@
    "folds": [
     {
      "fold": 0,
-     "compile_seconds": 0.2675432919058949,
+     "compile_seconds": 0.13350674998946488,
      "agreement": 1.0,
-     "real_exec_ms_per_sample": 15.183013941471776,
+     "cost": {
+      "pbs_count": 0,
+      "max_bit_width": 16,
+      "bootstrap_key_bytes": 0,
+      "keyswitch_key_bytes": 0,
+      "evaluation_key_bytes": 0,
+      "secret_key_bytes": 9920,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 9928
+     },
+     "real_exec_ms_per_sample": 14.045236321787039,
      "real_exec_rows": 3,
      "real_vs_sim_agreement": 1.0,
-     "keygen_seconds": 0.00036433315835893154
+     "keygen_seconds": 5.3875031881034374e-05,
+     "peak_extra_memory_mb": 0.442368
     },
     {
      "fold": 1,
-     "compile_seconds": 0.11366816679947078,
+     "compile_seconds": 0.16473662503995,
      "agreement": 1.0,
-     "real_exec_ms_per_sample": 15.66469467555483,
+     "cost": {
+      "pbs_count": 0,
+      "max_bit_width": 17,
+      "bootstrap_key_bytes": 0,
+      "keyswitch_key_bytes": 0,
+      "evaluation_key_bytes": 0,
+      "secret_key_bytes": 10240,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 10248
+     },
+     "real_exec_ms_per_sample": 9.393999993335456,
      "real_exec_rows": 3,
      "real_vs_sim_agreement": 1.0,
-     "keygen_seconds": 5.0582922995090485e-05
+     "keygen_seconds": 4.862499190494418e-05,
+     "peak_extra_memory_mb": 0.24576
     },
     {
      "fold": 2,
-     "compile_seconds": 0.09767637494951487,
+     "compile_seconds": 0.16997450002236292,
      "agreement": 1.0,
-     "real_exec_ms_per_sample": 15.270541654899716,
+     "cost": {
+      "pbs_count": 0,
+      "max_bit_width": 16,
+      "bootstrap_key_bytes": 0,
+      "keyswitch_key_bytes": 0,
+      "evaluation_key_bytes": 0,
+      "secret_key_bytes": 9912,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 9920
+     },
+     "real_exec_ms_per_sample": 9.281708335038275,
      "real_exec_rows": 3,
      "real_vs_sim_agreement": 1.0,
-     "keygen_seconds": 4.495796747505665e-05
+     "keygen_seconds": 5.220802268013358e-05,
+     "peak_extra_memory_mb": 0.262144
     },
     {
      "fold": 3,
-     "compile_seconds": 0.0956879579462111,
+     "compile_seconds": 0.16783783299615607,
      "agreement": 0.9833333333333333,
-     "real_exec_ms_per_sample": 15.56687499396503,
+     "cost": {
+      "pbs_count": 0,
+      "max_bit_width": 16,
+      "bootstrap_key_bytes": 0,
+      "keyswitch_key_bytes": 0,
+      "evaluation_key_bytes": 0,
+      "secret_key_bytes": 9904,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 9912
+     },
+     "real_exec_ms_per_sample": 14.271610998548567,
      "real_exec_rows": 3,
      "real_vs_sim_agreement": 1.0,
-     "keygen_seconds": 4.712492227554321e-05
+     "keygen_seconds": 4.504097159951925e-05,
+     "peak_extra_memory_mb": 0.098304
     },
     {
      "fold": 4,
-     "compile_seconds": 0.10087791597470641,
+     "compile_seconds": 0.1790890410193242,
      "agreement": 1.0,
-     "real_exec_ms_per_sample": 15.924388620381553,
+     "cost": {
+      "pbs_count": 0,
+      "max_bit_width": 17,
+      "bootstrap_key_bytes": 0,
+      "keyswitch_key_bytes": 0,
+      "evaluation_key_bytes": 0,
+      "secret_key_bytes": 10248,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 10256
+     },
+     "real_exec_ms_per_sample": 14.086263991581896,
      "real_exec_rows": 3,
      "real_vs_sim_agreement": 1.0,
-     "keygen_seconds": 4.875008016824722e-05
+     "keygen_seconds": 4.816701402887702e-05,
+     "peak_extra_memory_mb": 0.24576
     }
    ],
-   "real_exec_ms_per_sample": 15.521902777254581,
-   "compile_seconds_mean": 0.1350907415151596,
-   "keygen_seconds_mean": 0.00011114981025457382,
-   "real_vs_sim_agreement": 1.0
+   "real_exec_ms_per_sample": 12.215763928058246,
+   "compile_seconds_mean": 0.16302894981345162,
+   "keygen_seconds_mean": 4.958320641890168e-05,
+   "peak_extra_memory_mb_max": 0.442368,
+   "real_vs_sim_agreement": 1.0,
+   "cost_mean": {
+    "pbs_count": 0.0,
+    "max_bit_width": 16.4,
+    "bootstrap_key_bytes": 0.0,
+    "keyswitch_key_bytes": 0.0,
+    "evaluation_key_bytes": 0.0,
+    "secret_key_bytes": 10044.8,
+    "input_ciphertext_bytes": 600.0,
+    "output_ciphertext_bytes": 10052.8
+   },
+   "cost_range": {
+    "pbs_count": [
+     0,
+     0
+    ],
+    "max_bit_width": [
+     16,
+     17
+    ],
+    "bootstrap_key_bytes": [
+     0,
+     0
+    ],
+    "keyswitch_key_bytes": [
+     0,
+     0
+    ],
+    "evaluation_key_bytes": [
+     0,
+     0
+    ],
+    "secret_key_bytes": [
+     9904,
+     10248
+    ],
+    "input_ciphertext_bytes": [
+     600,
+     600
+    ],
+    "output_ciphertext_bytes": [
+     9912,
+     10256
+    ]
+   }
+  },
+  "xgboost": {
+   "settings": {
+    "n_bits": 7
+   },
+   "n_bits": 7,
+   "pooled": {
+    "accuracy": 0.801980198019802,
+    "precision": 0.8,
+    "recall": 0.7536231884057971,
+    "f1": 0.7761194029850746,
+    "roc_auc": 0.8755819060166887,
+    "specificity": 0.8424242424242424,
+    "confusion": {
+     "tn": 139,
+     "fp": 26,
+     "fn": 34,
+     "tp": 104
+    }
+   },
+   "agreement": 1.0,
+   "n_disagree": 0,
+   "max_abs_prob_diff": 0.23976084740830983,
+   "folds": [
+    {
+     "fold": 0,
+     "compile_seconds": 0.7199787920108065,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 66300,
+      "max_bit_width": 9,
+      "bootstrap_key_bytes": 839385088,
+      "keyswitch_key_bytes": 115662848,
+      "evaluation_key_bytes": 955047936,
+      "secret_key_bytes": 59096,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 4917600
+     },
+     "real_exec_ms_per_sample": 51987.22941701999,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 0.7200145000242628,
+     "peak_extra_memory_mb": 1319.862272
+    },
+    {
+     "fold": 1,
+     "compile_seconds": 0.6392999580129981,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 21300,
+      "max_bit_width": 9,
+      "bootstrap_key_bytes": 894685184,
+      "keyswitch_key_bytes": 89260032,
+      "evaluation_key_bytes": 983945216,
+      "secret_key_bytes": 61480,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 4917600
+     },
+     "real_exec_ms_per_sample": 33808.0994579941,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 0.712584082968533,
+     "peak_extra_memory_mb": 569.229312
+    },
+    {
+     "fold": 2,
+     "compile_seconds": 0.619532541022636,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 20100,
+      "max_bit_width": 9,
+      "bootstrap_key_bytes": 839385088,
+      "keyswitch_key_bytes": 115662848,
+      "evaluation_key_bytes": 955047936,
+      "secret_key_bytes": 59096,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 1639200
+     },
+     "real_exec_ms_per_sample": 38888.99691699771,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 0.8523501249728724,
+     "peak_extra_memory_mb": 183.975936
+    },
+    {
+     "fold": 3,
+     "compile_seconds": 0.5952274579904042,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 21100,
+      "max_bit_width": 9,
+      "bootstrap_key_bytes": 839385088,
+      "keyswitch_key_bytes": 115662848,
+      "evaluation_key_bytes": 955047936,
+      "secret_key_bytes": 59096,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 1639200
+     },
+     "real_exec_ms_per_sample": 30240.68912502844,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 0.7724966669920832,
+     "peak_extra_memory_mb": 6.766592
+    },
+    {
+     "fold": 4,
+     "compile_seconds": 0.7381913749850355,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 60300,
+      "max_bit_width": 9,
+      "bootstrap_key_bytes": 839385088,
+      "keyswitch_key_bytes": 115662848,
+      "evaluation_key_bytes": 955047936,
+      "secret_key_bytes": 59096,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 4917600
+     },
+     "real_exec_ms_per_sample": 94319.3311659852,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 0.7618950830074027,
+     "peak_extra_memory_mb": 599.916544
+    }
+   ],
+   "real_exec_ms_per_sample": 49848.86921660509,
+   "compile_seconds_mean": 0.6624460248043761,
+   "keygen_seconds_mean": 0.7638680915930308,
+   "peak_extra_memory_mb_max": 1319.862272,
+   "real_vs_sim_agreement": 1.0,
+   "cost_mean": {
+    "pbs_count": 37820.0,
+    "max_bit_width": 9.0,
+    "bootstrap_key_bytes": 850445107.2,
+    "keyswitch_key_bytes": 110382284.8,
+    "evaluation_key_bytes": 960827392.0,
+    "secret_key_bytes": 59572.8,
+    "input_ciphertext_bytes": 600.0,
+    "output_ciphertext_bytes": 3606240.0
+   },
+   "cost_range": {
+    "pbs_count": [
+     20100,
+     66300
+    ],
+    "max_bit_width": [
+     9,
+     9
+    ],
+    "bootstrap_key_bytes": [
+     839385088,
+     894685184
+    ],
+    "keyswitch_key_bytes": [
+     89260032,
+     115662848
+    ],
+    "evaluation_key_bytes": [
+     955047936,
+     983945216
+    ],
+    "secret_key_bytes": [
+     59096,
+     61480
+    ],
+    "input_ciphertext_bytes": [
+     600,
+     600
+    ],
+    "output_ciphertext_bytes": [
+     1639200,
+     4917600
+    ]
+   }
+  },
+  "mlp": {
+   "settings": {
+    "n_bits": 7,
+    "rounding_threshold_bits": 6
+   },
+   "n_bits": 7,
+   "pooled": {
+    "accuracy": 0.834983498349835,
+    "precision": 0.8188405797101449,
+    "recall": 0.8188405797101449,
+    "f1": 0.8188405797101449,
+    "roc_auc": 0.9019762845849802,
+    "specificity": 0.8484848484848485,
+    "confusion": {
+     "tn": 140,
+     "fp": 25,
+     "fn": 25,
+     "tp": 113
+    }
+   },
+   "agreement": 1.0,
+   "n_disagree": 0,
+   "max_abs_prob_diff": 0.0843149458303255,
+   "folds": [
+    {
+     "fold": 0,
+     "compile_seconds": 0.4667318330029957,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 242,
+      "max_bit_width": 16,
+      "bootstrap_key_bytes": 2024210432,
+      "keyswitch_key_bytes": 541868032,
+      "evaluation_key_bytes": 2566078464,
+      "secret_key_bytes": 93464,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 65544
+     },
+     "real_exec_ms_per_sample": 6983.399707998615,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 7.595081500010565,
+     "peak_extra_memory_mb": 4629.397504
+    },
+    {
+     "fold": 1,
+     "compile_seconds": 0.4562028329819441,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 259,
+      "max_bit_width": 16,
+      "bootstrap_key_bytes": 2025848832,
+      "keyswitch_key_bytes": 541966336,
+      "evaluation_key_bytes": 2567815168,
+      "secret_key_bytes": 93480,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 65544
+     },
+     "real_exec_ms_per_sample": 4648.492083011661,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 8.152202415978536,
+     "peak_extra_memory_mb": 2183.921664
+    },
+    {
+     "fold": 2,
+     "compile_seconds": 0.45318716700421646,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 243,
+      "max_bit_width": 16,
+      "bootstrap_key_bytes": 2037317632,
+      "keyswitch_key_bytes": 542654464,
+      "evaluation_key_bytes": 2579972096,
+      "secret_key_bytes": 93592,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 65544
+     },
+     "real_exec_ms_per_sample": 4380.835959047545,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 8.63422841700958,
+     "peak_extra_memory_mb": 4467.687424
+    },
+    {
+     "fold": 3,
+     "compile_seconds": 0.48339758295333013,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 243,
+      "max_bit_width": 16,
+      "bootstrap_key_bytes": 2027487232,
+      "keyswitch_key_bytes": 542064640,
+      "evaluation_key_bytes": 2569551872,
+      "secret_key_bytes": 93496,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 65544
+     },
+     "real_exec_ms_per_sample": 4848.57158298837,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 9.10777662502369,
+     "peak_extra_memory_mb": 2485.026816
+    },
+    {
+     "fold": 4,
+     "compile_seconds": 0.48375533398939297,
+     "agreement": 1.0,
+     "cost": {
+      "pbs_count": 242,
+      "max_bit_width": 16,
+      "bootstrap_key_bytes": 2028306432,
+      "keyswitch_key_bytes": 542113792,
+      "evaluation_key_bytes": 2570420224,
+      "secret_key_bytes": 93504,
+      "input_ciphertext_bytes": 600,
+      "output_ciphertext_bytes": 65544
+     },
+     "real_exec_ms_per_sample": 4271.3965000002645,
+     "real_exec_rows": 1,
+     "real_vs_sim_agreement": 1.0,
+     "keygen_seconds": 8.634408792015165,
+     "peak_extra_memory_mb": 4459.937792
+    }
+   ],
+   "real_exec_ms_per_sample": 5026.539166609291,
+   "compile_seconds_mean": 0.46865494998637586,
+   "keygen_seconds_mean": 8.424739550007507,
+   "peak_extra_memory_mb_max": 4629.397504,
+   "real_vs_sim_agreement": 1.0,
+   "cost_mean": {
+    "pbs_count": 245.8,
+    "max_bit_width": 16.0,
+    "bootstrap_key_bytes": 2028634112.0,
+    "keyswitch_key_bytes": 542133452.8,
+    "evaluation_key_bytes": 2570767564.8,
+    "secret_key_bytes": 93507.2,
+    "input_ciphertext_bytes": 600.0,
+    "output_ciphertext_bytes": 65544.0
+   },
+   "cost_range": {
+    "pbs_count": [
+     242,
+     259
+    ],
+    "max_bit_width": [
+     16,
+     16
+    ],
+    "bootstrap_key_bytes": [
+     2024210432,
+     2037317632
+    ],
+    "keyswitch_key_bytes": [
+     541868032,
+     542654464
+    ],
+    "evaluation_key_bytes": [
+     2566078464,
+     2579972096
+    ],
+    "secret_key_bytes": [
+     93464,
+     93592
+    ],
+    "input_ciphertext_bytes": [
+     600,
+     600
+    ],
+    "output_ciphertext_bytes": [
+     65544,
+     65544
+    ]
+   }
+  }
+ },
+ "fhe_study": {
+  "quantisation": {
+   "xgboost": [
+    {
+     "setting": {
+      "n_bits": 5
+     },
+     "chosen": false,
+     "n_agree": 296,
+     "max_abs_prob_diff": 0.5439454525971203,
+     "pbs_mean": 30300.0,
+     "max_bit_width": 7,
+     "evaluation_key_bytes_mean": 1075032883.2
+    },
+    {
+     "setting": {
+      "n_bits": 6
+     },
+     "chosen": false,
+     "n_agree": 297,
+     "max_abs_prob_diff": 0.34010424044869114,
+     "pbs_mean": 34060.0,
+     "max_bit_width": 8,
+     "evaluation_key_bytes_mean": 960368640.0
+    },
+    {
+     "setting": {
+      "n_bits": 7
+     },
+     "chosen": true,
+     "n_agree": 303,
+     "max_abs_prob_diff": 0.23976084740830983,
+     "pbs_mean": 37820.0,
+     "max_bit_width": 9,
+     "evaluation_key_bytes_mean": 960827392.0
+    }
+   ],
+   "mlp": [
+    {
+     "setting": {
+      "n_bits": 6
+     },
+     "chosen": false,
+     "n_agree": 303,
+     "max_abs_prob_diff": 0.314114115132346,
+     "pbs_mean": 25.0,
+     "max_bit_width": 14,
+     "evaluation_key_bytes_mean": 1117156147.2
+    },
+    {
+     "setting": {
+      "n_bits": 7,
+      "rounding_threshold_bits": 6
+     },
+     "chosen": true,
+     "n_agree": 303,
+     "max_abs_prob_diff": 0.0843149458303255,
+     "pbs_mean": 245.8,
+     "max_bit_width": 16,
+     "evaluation_key_bytes_mean": 2570767564.8
+    },
+    {
+     "setting": {
+      "n_bits": 8,
+      "rounding_threshold_bits": 6
+     },
+     "chosen": false,
+     "n_agree": 302,
+     "max_abs_prob_diff": 0.06327892606880081,
+     "pbs_mean": 295.8,
+     "max_bit_width": 18,
+     "evaluation_key_bytes_mean": 4593280614.4
+    }
+   ]
+  },
+  "activation": {
+   "relu": {
+    "pooled": {
+     "accuracy": 0.834983498349835,
+     "precision": 0.8188405797101449,
+     "recall": 0.8188405797101449,
+     "f1": 0.8188405797101449,
+     "roc_auc": 0.901405357927097,
+     "specificity": 0.8484848484848485,
+     "confusion": {
+      "tn": 140,
+      "fp": 25,
+      "fn": 25,
+      "tp": 113
+     }
+    },
+    "encrypted": {
+     "accuracy": 0.834983498349835,
+     "precision": 0.8188405797101449,
+     "recall": 0.8188405797101449,
+     "f1": 0.8188405797101449,
+     "roc_auc": 0.9019762845849802,
+     "specificity": 0.8484848484848485,
+     "confusion": {
+      "tn": 140,
+      "fp": 25,
+      "fn": 25,
+      "tp": 113
+     }
+    },
+    "pbs_mean": 245.8,
+    "max_bit_width": 16
+   },
+   "square": {
+    "pooled": {
+     "accuracy": 0.8250825082508251,
+     "precision": 0.7972027972027972,
+     "recall": 0.8260869565217391,
+     "f1": 0.8113879003558719,
+     "roc_auc": 0.8832674571805007,
+     "specificity": 0.8242424242424242,
+     "confusion": {
+      "tn": 136,
+      "fp": 29,
+      "fn": 24,
+      "tp": 114
+     }
+    },
+    "encrypted": {
+     "accuracy": 0.801980198019802,
+     "precision": 0.74375,
+     "recall": 0.8623188405797102,
+     "f1": 0.7986577181208053,
+     "roc_auc": 0.8833772507685551,
+     "specificity": 0.7515151515151515,
+     "confusion": {
+      "tn": 124,
+      "fp": 41,
+      "fn": 19,
+      "tp": 119
+     }
+    },
+    "agreement": 0.9438943894389439,
+    "pbs_mean": 250.0,
+    "max_bit_width": 16
+   }
   }
  },
  "meta": {
-  "generated": "2026-09-30T23:29:56",
-  "runtime_seconds": 14.346814749995247,
+  "generated": "2026-10-24T16:48:49",
+  "runtime_seconds": 500.26165187498555,
   "versions": {
    "python": "3.11.14",
    "scikit-learn": "1.5.0",

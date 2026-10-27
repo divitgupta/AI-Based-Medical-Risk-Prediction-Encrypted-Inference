@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from . import config
-from .data import load_breast, load_heart
+from .data import load_base_paper, load_heart
 
 
 def _histogram(values, labels, bins=12):
@@ -87,20 +87,31 @@ def heart_eda():
     }
 
 
-def breast_eda():
-    X, y = load_breast()
+def base_paper_eda():
+    """How the base paper's 1,025-row file relates to our 303-row file."""
+    X, y, group = load_base_paper()
+    ours = pd.read_csv(config.HEART_CSV).drop_duplicates()
+    theirs = pd.read_csv(config.BASE_PAPER_CSV)
+    distinct = theirs.drop_duplicates()
+    shared = distinct.merge(ours, how="inner", on=list(ours.columns))
+    copies = np.bincount(np.bincount(group))
     return {
-        "name": "Breast Cancer Wisconsin (Diagnostic)",
-        "role": "secondary",
-        "source": "UCI via Kaggle (uciml/breast-cancer-wisconsin-data)",
-        "n_samples": int(len(y)),
-        "n_features": int(X.shape[1]),
-        "class_names": {"0": "Benign", "1": "Malignant"},
-        "class_counts": {"0": int((y == 0).sum()), "1": int((y == 1).sum())},
-        "missing_values": int(X.isna().sum().sum()),
-        "status": "Dataset available · full experiment in Phase 2",
+        "name": "Heart Disease (base-paper copy)",
+        "source": "Kaggle johnsmith88/heart-disease-dataset, as used by Naresh & Reddi (2025)",
+        "n_rows": int(len(theirs)),
+        "n_distinct": int(len(distinct)),
+        "n_duplicate_rows": int(len(theirs) - len(distinct)),
+        "n_shared_with_ours": int(len(shared)),
+        "n_ours_distinct": int(len(ours)),
+        "copies_per_patient": {str(k): int(v) for k, v in enumerate(copies) if k and v},
+        "class_counts_rows": {"0": int((y == 0).sum()), "1": int((y == 1).sum())},
+        "class_counts_distinct": {
+            "0": int((1 - distinct["target"] == 0).sum()),
+            "1": int((1 - distinct["target"] == 1).sum()),
+        },
+        "class_names": {"0": "No Disease", "1": "Disease"},
     }
 
 
 def build():
-    return {"heart": heart_eda(), "breast": breast_eda()}
+    return {"heart": heart_eda(), "base_paper": base_paper_eda()}
