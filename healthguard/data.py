@@ -8,7 +8,7 @@ sensitivity to disease.
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
 
 from . import config
 
@@ -68,16 +68,71 @@ def load_base_paper():
     return X, y, group
 
 
-def folds(y):
+def match_to_cleveland():
+    """
+    For each row of the base paper's 1,025-row file, the index of the
+    identical row (all 13 features and the label) in our Cleveland file.
+    Every row has one: the file holds no patients we don't already have.
+    """
+    ours = pd.read_csv(config.HEART_CSV)
+    theirs = pd.read_csv(config.BASE_PAPER_CSV)
+    cols = list(ours.columns)
+
+    def key(df):
+        return df[cols].astype(float).round(4).astype(str).agg("|".join, axis=1)
+
+    first = {}
+    for i, k in enumerate(key(ours)):
+        first.setdefault(k, i)
+    idx = key(theirs).map(first)
+    if idx.isna().any():
+        raise ValueError(f"{int(idx.isna().sum())} base-paper rows are not in the Cleveland file")
+    return idx.to_numpy(dtype=int)
+
+
+def load_dataset(name=None):
+    """
+    Load one of config.DATASETS (default: the active one).
+
+    Returns X, y, groups. `groups` holds one id per distinct patient when
+    the split must keep a patient's copies together (base1025_patient),
+    else None.
+    """
+    name = name or config.DATASET
+    if name == "cleveland":
+        X, y = load_heart()
+        return X, y, None
+    X, y, group = load_base_paper()
+    if name == "base1025_patient":
+        return X, y, group
+    if name == "base1025_row":
+        return X, y, None
+    raise ValueError(name)
+
+
+def folds(y, groups=None):
     """
     Stratified 5-fold split. Returns a list of (train_idx, test_idx).
 
     Every sample appears in exactly one test fold, so pooling the test-fold
-    predictions gives one out-of-fold (OOF) prediction per patient.
+    predictions gives one out-of-fold (OOF) prediction per patient. With
+    `groups`, every row of a patient lands in the same fold.
     """
+    if groups is not None:
+        sgkf = StratifiedGroupKFold(n_splits=config.N_FOLDS, shuffle=True,
+                                    random_state=config.SEED)
+        return list(sgkf.split(np.zeros(len(y)), y, groups))
     skf = StratifiedKFold(n_splits=config.N_FOLDS, shuffle=True,
                           random_state=config.SEED)
     return list(skf.split(np.zeros(len(y)), y))
+
+
+def inner_cv(groups=None):
+    """Splitter for tuning inside a training fold (grouped when needed).
+    Pass the same `groups` to its .split() / to GridSearchCV.fit()."""
+    if groups is not None:
+        return StratifiedGroupKFold(config.N_INNER_FOLDS, shuffle=True, random_state=config.SEED)
+    return StratifiedKFold(config.N_INNER_FOLDS, shuffle=True, random_state=config.SEED)
 
 
 def fold_of_each_sample(fold_list, n):

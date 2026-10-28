@@ -9,9 +9,10 @@ lsof -ti:5001 | xargs kill -9 2>/dev/null; ./scripts/run_app.sh
 Wait for these lines in the terminal:
 
 ```
-Loaded 5 precompiled logreg FHE bundles (no compilation) in 0.7s
-Warmed up 5 logreg FHE circuits in …
-FHE bundles for xgboost, mlp load on first use (large evaluation keys)
+[cleveland] loaded 3 models × 5 folds (303 rows); artifacts consistent with predictions.json
+[base1025_patient] loaded 3 models × 5 folds (1025 rows); …
+[base1025_row] loaded 3 models × 5 folds (1025 rows); …
+[base paper table] our Cleveland models on all 1025 rows (not retrained, nothing saved) …
 Serving on http://localhost:5001
 ```
 
@@ -27,73 +28,65 @@ fonts.
 
 > The project asks two questions from the synopsis. How does diagnostic
 > performance change as model complexity increases? And can a prediction be
-> made without the server ever seeing the patient's data? Phase 1 answers
-> both on the Heart Disease dataset.
+> made without the server ever seeing the patient's data? The site has four
+> tabs, in the order of this demo.
 
-## 1 · Overview (1 min)
+The **Dataset** switch at the top right flips every tab between three
+datasets: our Cleveland file (303 patients), and the base paper's own file
+(1,025 rows) with every model **retrained** on it, split *by patient*
+(honest) or *by row* (copies leak, inflated).
+Demo on Cleveland; switch at the end of tab 4 (see below). Grey
+**More details** bars at the bottom of each tab hold the extra charts. Leave
+them closed unless someone asks.
+
+## 1 · Overview & Data (2 min)
 
 - Stat cards: **303** patients, **14** attributes (13 features + target),
   **3** models, **5** CV folds.
 - Walk the pipeline strip left to right: Data → Clean → Preprocess → 5-fold CV
   → Models → Evaluate → FHE.
-- Headline results: logistic regression is best on accuracy (85.1%) and AUC
-  (0.915).
-- Point at the two **status** cards: what Phase 1 delivered and what Phase 2
-  added. The encrypted-inference card now lists all three models.
-
-## 2 · Dataset (2 min)
-
 - **Class balance:** 138 disease / 165 no disease, mildly imbalanced. Hence
   stratified folds and class weighting.
-- **Feature types:** 5 continuous (scaled), 3 binary (passthrough),
-  5 nominal (one-hot). Say: *"chest pain type is a category, not a number,
-  so it's one-hot encoded rather than treated as ordinal."* This is synopsis
-  §5.
-- **Histogram:** it defaults to *max heart rate*. The disease group sits
-  visibly lower, as it should clinically.
-- **Correlation matrix:** the bottom row is correlation with the disease
-  label. Exercise angina (+0.44), ST depression (+0.43), vessels (+0.46),
-  chest pain type (−0.43).
-- **Data-quality corrections (lead with this, it's the strongest viva point):**
+- **Labels are inverted (strongest viva point):**
   > *"The Kaggle CSV has its labels inverted: target = 1 means no disease.
   > Every clinical sign in this table agrees, and 165 ones matches the 164
   > healthy patients in the original UCI data. Without this fix, 'recall'
   > would measure how well we find healthy people."*
-- **Base-paper copy tab:** the base paper's 1,025-row file is our 302
-  patients repeated 1–4 times. Set this up here; the payoff is on the last tab.
+- *If asked:* **More data details** has the feature histograms, feature types
+  (one-hot for chest pain type, a category not a number), the correlation
+  matrix and the invalid codes.
 
-## 3 · Model Comparison (3 min), the core of the demo
+## 2 · Results (3 min), the core of the demo
 
-- **Metrics table:** recall is highlighted because a missed disease case is
-  the costly error (synopsis §7).
-  - LR: 85.15% accuracy, 81.2% recall, 0.915 AUC
-  - XGBoost: 80.2% / 75.4% / 0.873
-  - MLP: 83.5% / 81.9% / 0.901
-- Flip the toggle to **Mean ± std**. Say: *"accuracy varies ±3–6 points
-  across folds, more than the gap between the models. With 61 patients per
-  fold, one patient moves accuracy by 1.6 points."* That's the honest
-  reading of small-data results.
+- **Leaderboard:** all four models side by side, with encrypted time.
+  - LR: 85.1% accuracy, 81.2% recall, 0.915 AUC, **12 ms** encrypted
+  - MLP: 83.5% / 81.9% / 0.901, 5 s
+  - XGBoost: 80.2% / 75.4% / 0.873, 50 s
+  - Elastic Learner (combines the three): 83.5% / 81.2% / 0.906, 55 s
+- **Recommended model card:** LR, MLP and the Elastic Learner tie on F2
+  (within 0.01), so the cheapest to encrypt wins: **logistic regression**.
+- **How the combined model works:** an elastic-net logistic regression learns
+  how much to trust each model; the L1 part can switch one off.
+  > *"Even a learner built to combine all three can't beat the simplest model."*
 - **ROC curves:** LR and MLP nearly overlap; XGBoost sits below.
 - **Confusion matrices:** read the *missed disease* cell. LR 26, MLP 25,
   XGBoost 34.
-- **Complexity ladder:** LR has 26 parameters, the MLP 561, and XGBoost up to
+- **Complexity ladder:** LR has 26 parameters, the MLP 561, XGBoost up to
   6,610 tree nodes.
   > *"More complexity bought nothing on 303 patients. The simplest model is
-  > the best or tied."*
+  > the best or tied."* This answers the synopsis' central question.
+- *If asked:* **More details** has mean ± std per fold (±3–6 points, bigger
+  than the gaps between models), the hyperparameters chosen in each fold, the
+  MLP training curve and the Elastic Learner's weights per fold.
 
-  This is the answer to the synopsis' central research question, for this
-  dataset.
-- **Hyperparameters per fold:** each fold tuned its own model, on its own
-  training rows only. LR chose `C = 0.1` in all five folds, which is a stable
-  choice.
-- **MLP training curve:** validation loss flattens and early stopping kicks
-  in. The weights from the best epoch are restored.
-
-## 4 · Encrypted Inference (3 min), the "wow" moment
+## 3 · Encrypted Demo (3 min), the "wow" moment
 
 Use the three **Quick scenarios** chips in the Patient card. Each one loads a
-real patient (chosen by the model's own out-of-fold probability) and runs the
-encrypted inference immediately.
+real patient (chosen by the selected model's own out-of-fold probability) and
+runs the encrypted inference immediately. The chips change with the model:
+every model, including the Elastic Learner, has its own *No disease /
+Probable disease / Disease* patients. The numbers below are for Logistic
+Regression.
 
 1. **No disease** (patient #156, p = 0.05). Walk the three steps:
    - **Client** encodes and encrypts (~3–7 ms).
@@ -105,55 +98,44 @@ encrypted inference immediately.
    randomised. Plaintext and FHE agree: ✓ No Disease.
 2. **Disease** (patient #211, p = 0.95). Same flow, with the opposite,
    confident answer.
-3. **Probable disease** (patient #210, p = 0.65). This is the one to talk
-   about. Read the amber note:
+3. **Probable disease** (patient #210, p = 0.65). Read the amber note:
    > *"Of the 42 patients the model places between 0.55 and 0.75, 76 %
-   > actually have disease. So when the model says 'probable', it means about
-   > 3 in 4. Its probabilities are honest, not just its yes/no decisions."*
-4. Bottom card: **302 / 303** identical decisions across every patient.
-   Click **patient #85** and run it:
-   > *"This is the one disagreement. Plaintext says 0.533, just over the
-   > threshold; 8-bit quantisation gives 0.483. It's a borderline case, and we
-   > report it rather than claim 100%."*
-5. Switch the model to **MLP** and run any patient (~5 s, plus ~8 s the first
-   time a fold's keys are generated). Then **XGBoost** (~30–60 s; start it and
-   keep talking). Same flow, same agreement check, much higher cost.
+   > actually have disease. So 'probable' means about 3 in 4."*
+4. Bottom card: **302 / 303** identical decisions. Click **patient #85**:
+   > *"The one disagreement. Plaintext says 0.533, just over the threshold;
+   > 8-bit quantisation gives 0.483. A borderline case, and we report it."*
+5. Switch the model to **MLP** (~5 s, plus ~8 s the first time) and click
+   its *Probable disease* chip (patient #273, p = 0.65: of the 25 patients the
+   MLP puts there, only 56% have disease, less certain than LR). Then
+   **XGBoost** (~30–60 s; start it and keep talking).
    > *"Encryption works for all three models. What changes is the price."*
+   **Elastic Learner** runs all three encrypted circuits (~40–55 s) and shows
+   how each model's decrypted answer was combined on the client.
 
-## 5 · Encryption Cost & Base Paper (3 min), Phase 2
+## 4 · Cost & Base Paper (3 min), Phase 2
 
-- **Accuracy table:** every model keeps its accuracy encrypted. XGBoost and
-  the MLP agree with plaintext on 303/303 patients.
+- **Accuracy table:** every model keeps its accuracy encrypted.
 - **Cost table and the two log-scale charts:** LR 12 ms and no keys; MLP
   5 s and 2.6 GB of keys; XGBoost 50 s and 38,000 bootstraps per patient.
   > *"Accuracy didn't grow with complexity, but encryption cost grew by more
   > than three orders of magnitude. On this data the simple model wins twice."*
-- **Quantisation study:** fewer bits are cheaper but drift further from
-  plaintext. We picked the cheapest setting that changes no decision.
-- **Activation study:** x² (what CKKS needs) costs the same as ReLU under
-  TFHE and is slightly less accurate, so we keep ReLU.
-- **Base paper table (strongest Phase-2 point):**
-  > *"On the base paper's own file our LR gets 85.9%, matching their 85%, and
-  > our encrypted LR loses nothing. But 99% of test rows have an identical
-  > copy in training if you split by row: XGBoost then scores 99.2%. Split by
-  > patient and it drops to 78.1%. Duplicates make complex models look far
-  > better than they are."*
-
-## 6 · Elastic Learner (2 min)
-
-- **How it works card:** a stacking learner. An elastic-net logistic
-  regression combines the three models' predictions and learns how much to
-  trust each; the L1 part can switch a model off.
-- **Leaderboard and verdicts:** LR wins F2, accuracy, precision, AUC and
-  encrypted time; the MLP has the best recall by one patient.
-- **Recommended model card:** LR, MLP and the Elastic Learner tie on F2
-  (within 0.01), so the rule picks the cheapest to encrypt: **logistic
-  regression**.
-  > *"Even a learner built to combine all three can't beat the simplest model
-  > here, and it would need all three encrypted circuits. Third time the data
-  > gives the same answer."*
-- **Weights chart:** the trust given to each model jumps between folds. No
-  model is reliably better.
+- **Base paper table:**
+  > *"The base paper's file has 1,025 rows but only 302 patients, ours,
+  > repeated. We retrained everything on it twice. Split by row, 99% of test
+  > rows have a copy in training and XGBoost scores 99%. Split by patient it
+  > drops to 79%. Duplicates make complex models look far better than they
+  > are."*
+- **Flip the Dataset switch to "Base paper · by patient"** and click back
+  through tabs 2 and 3:
+  > *"Retrained on the paper's own data, our LR gets 85.7% against their 85%,
+  > and the encrypted version keeps every decision, where theirs lost a point.
+  > The simplest model still wins."*
+- **Then "Base paper · by row"**: the amber banner warns the scores are
+  inflated. On tab 3, pick any row: the note under the patient says how many
+  copies of that patient were in the model's training data.
+- *If asked:* **More encryption details** has the quantisation study (fewer
+  bits are cheaper but drift further) and ReLU vs x² (what CKKS needs; no
+  cheaper under TFHE).
 
 ## Closing line
 

@@ -361,6 +361,32 @@
    ]
   }
  },
+ "fhe": {
+  "pooled": {
+   "accuracy": 0.834983498349835,
+   "precision": 0.8235294117647058,
+   "recall": 0.8115942028985508,
+   "f1": 0.8175182481751825,
+   "f2": 0.813953488372093,
+   "roc_auc": 0.9065876152832675,
+   "specificity": 0.8545454545454545,
+   "confusion": {
+    "tn": 141,
+    "fp": 24,
+    "fn": 26,
+    "tp": 112
+   }
+  },
+  "agreement": 0.9933993399339934,
+  "n_disagree": 2,
+  "max_abs_prob_diff": 0.10561855660481434,
+  "real_exec_ms_per_sample": 54887.62414714244,
+  "settings": null,
+  "cost_mean": {
+   "pbs_count": 38065.8,
+   "evaluation_key_bytes": 3531594956.8
+  }
+ },
  "best": {
   "f2": {
    "label": "F2 (selection metric)",
@@ -410,8 +436,8 @@
   "rule": "Highest pooled F2 (recall-weighted, the project's selection metric). Models within 0.01 of the top F2 count as tied; among them, pick the cheapest to run encrypted."
  },
  "meta": {
-  "generated": "2026-10-24T20:14:10",
-  "runtime_seconds": 4.8154336249572225,
+  "generated": "2026-10-27T23:49:02",
+  "runtime_seconds": 5.3097345840069465,
   "seed": 42
  }
 }

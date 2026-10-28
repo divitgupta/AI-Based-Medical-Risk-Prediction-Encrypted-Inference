@@ -38,9 +38,22 @@ def _category_counts(values, labels):
     }
 
 
-def heart_eda():
-    X, y = load_heart()
-    raw = pd.read_csv(config.HEART_CSV)
+SOURCES = {
+    "cleveland": ("Heart Disease (Cleveland)", "UCI Cleveland via Kaggle (ronitf/heart-disease-uci)",
+                  config.HEART_CSV),
+    "base1025": ("Heart Disease (base paper's file)",
+                 "Kaggle johnsmith88/heart-disease-dataset, as used by Naresh & Reddi (2025)",
+                 config.BASE_PAPER_CSV),
+}
+
+
+def heart_eda(dataset="cleveland"):
+    if dataset == "cleveland":
+        (X, y), groups = load_heart(), None
+    else:                       # any view of the base paper's file
+        X, y, groups = load_base_paper()
+    name, source, csv = SOURCES["cleveland" if dataset == "cleveland" else "base1025"]
+    raw = pd.read_csv(csv)
 
     features = {}
     for col in X.columns:
@@ -68,10 +81,12 @@ def heart_eda():
                          "expected_in_disease": expect})
 
     return {
-        "name": "Heart Disease (Cleveland)",
+        "name": name,
         "role": "primary",
-        "source": "UCI Cleveland via Kaggle (ronitf/heart-disease-uci)",
+        "dataset": dataset,
+        "source": source,
         "n_samples": int(len(y)),
+        "n_distinct_patients": int(len(y) if groups is None else len(np.unique(groups))),
         "n_attributes": int(raw.shape[1]),
         "n_features": int(X.shape[1]),
         "class_names": {"0": "No Disease", "1": "Disease"},
@@ -113,5 +128,7 @@ def base_paper_eda():
     }
 
 
-def build():
-    return {"heart": heart_eda(), "base_paper": base_paper_eda()}
+def build(dataset="cleveland"):
+    """`heart` describes the chosen file; `base_paper` describes how the
+    1,025-row file relates to the Cleveland one."""
+    return {"heart": heart_eda(dataset), "base_paper": base_paper_eda()}

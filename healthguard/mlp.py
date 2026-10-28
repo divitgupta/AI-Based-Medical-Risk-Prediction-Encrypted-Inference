@@ -64,16 +64,28 @@ class MLPClassifier(BaseEstimator, ClassifierMixin):
         self.random_state = random_state
 
     # ── training ─────────────────────────────────────────────────────────
-    def fit(self, X, y):
+    def fit(self, X, y, groups=None):
+        """`groups` (one id per patient) keeps every copy of a patient on the
+        same side of the early-stopping split, for data with duplicate rows."""
         X = np.asarray(X, dtype=np.float32)
         y = np.asarray(y, dtype=np.float32)
         torch.manual_seed(self.random_state)
 
         idx = np.arange(len(y))
-        tr_idx, val_idx = train_test_split(
-            idx, test_size=self.val_fraction, stratify=y,
-            random_state=self.random_state,
-        )
+        if groups is None:
+            tr_idx, val_idx = train_test_split(
+                idx, test_size=self.val_fraction, stratify=y,
+                random_state=self.random_state,
+            )
+        else:
+            groups = np.asarray(groups)
+            ids, first = np.unique(groups, return_index=True)
+            _, val_ids = train_test_split(
+                ids, test_size=self.val_fraction, stratify=y[first],
+                random_state=self.random_state,
+            )
+            in_val = np.isin(groups, val_ids)
+            tr_idx, val_idx = idx[~in_val], idx[in_val]
         self.val_idx_ = val_idx
 
         Xtr, ytr = torch.from_numpy(X[tr_idx]), torch.from_numpy(y[tr_idx])

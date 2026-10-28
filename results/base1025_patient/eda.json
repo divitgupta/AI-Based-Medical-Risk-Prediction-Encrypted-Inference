@@ -1,0 +1,824 @@
+{
+ "heart": {
+  "name": "Heart Disease (base paper's file)",
+  "role": "primary",
+  "dataset": "base1025_patient",
+  "source": "Kaggle johnsmith88/heart-disease-dataset, as used by Naresh & Reddi (2025)",
+  "n_samples": 1025,
+  "n_distinct_patients": 302,
+  "n_attributes": 14,
+  "n_features": 13,
+  "class_names": {
+   "0": "No Disease",
+   "1": "Disease"
+  },
+  "class_counts": {
+   "0": 526,
+   "1": 499
+  },
+  "groups": {
+   "continuous": [
+    "age",
+    "trestbps",
+    "chol",
+    "thalach",
+    "oldpeak"
+   ],
+   "binary": [
+    "sex",
+    "fbs",
+    "exang"
+   ],
+   "nominal": [
+    "cp",
+    "restecg",
+    "slope",
+    "ca",
+    "thal"
+   ]
+  },
+  "invalid_codes": {
+   "ca": {
+    "codes": [
+     4
+    ],
+    "rows": 18
+   },
+   "thal": {
+    "codes": [
+     0
+    ],
+    "rows": 7
+   }
+  },
+  "label_evidence": [
+   {
+    "feature": "exang",
+    "label": "Exercise-induced angina",
+    "csv_target_0": 0.55,
+    "csv_target_1": 0.13,
+    "expected_in_disease": "higher"
+   },
+   {
+    "feature": "oldpeak",
+    "label": "ST depression (exercise vs rest)",
+    "csv_target_0": 1.6,
+    "csv_target_1": 0.57,
+    "expected_in_disease": "higher"
+   },
+   {
+    "feature": "ca",
+    "label": "Major vessels coloured",
+    "csv_target_0": 1.16,
+    "csv_target_1": 0.37,
+    "expected_in_disease": "higher"
+   },
+   {
+    "feature": "thalach",
+    "label": "Max heart rate achieved",
+    "csv_target_0": 139.13,
+    "csv_target_1": 158.59,
+    "expected_in_disease": "lower"
+   },
+   {
+    "feature": "age",
+    "label": "Age",
+    "csv_target_0": 56.57,
+    "csv_target_1": 52.41,
+    "expected_in_disease": "higher"
+   },
+   {
+    "feature": "sex",
+    "label": "Sex",
+    "csv_target_0": 0.83,
+    "csv_target_1": 0.57,
+    "expected_in_disease": "higher"
+   }
+  ],
+  "features": {
+   "age": {
+    "type": "continuous",
+    "edges": [
+     29.0,
+     33.0,
+     37.0,
+     41.0,
+     45.0,
+     49.0,
+     53.0,
+     57.0,
+     61.0,
+     65.0,
+     69.0,
+     73.0,
+     77.0
+    ],
+    "by_class": {
+     "0": [
+      4,
+      14,
+      27,
+      92,
+      53,
+      78,
+      77,
+      70,
+      44,
+      41,
+      20,
+      6
+     ],
+     "1": [
+      0,
+      7,
+      16,
+      28,
+      36,
+      42,
+      71,
+      138,
+      90,
+      54,
+      14,
+      3
+     ]
+    },
+    "group": "continuous",
+    "label": "Age",
+    "unit": "years"
+   },
+   "sex": {
+    "type": "categorical",
+    "categories": [
+     0,
+     1
+    ],
+    "by_class": {
+     "0": [
+      226,
+      300
+     ],
+     "1": [
+      86,
+      413
+     ]
+    },
+    "missing": 0,
+    "group": "binary",
+    "label": "Sex",
+    "values": {
+     "0": "Female",
+     "1": "Male"
+    }
+   },
+   "cp": {
+    "type": "categorical",
+    "categories": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "by_class": {
+     "0": [
+      122,
+      134,
+      219,
+      51
+     ],
+     "1": [
+      375,
+      33,
+      65,
+      26
+     ]
+    },
+    "missing": 0,
+    "group": "nominal",
+    "label": "Chest pain type",
+    "unit": "code"
+   },
+   "trestbps": {
+    "type": "continuous",
+    "edges": [
+     94.0,
+     102.833,
+     111.667,
+     120.5,
+     129.333,
+     138.167,
+     147.0,
+     155.833,
+     164.667,
+     173.5,
+     182.333,
+     191.167,
+     200.0
+    ],
+    "by_class": {
+     "0": [
+      23,
+      53,
+      115,
+      54,
+      144,
+      65,
+      40,
+      19,
+      7,
+      6,
+      0,
+      0
+     ],
+     "1": [
+      7,
+      47,
+      84,
+      74,
+      100,
+      82,
+      46,
+      23,
+      15,
+      14,
+      0,
+      7
+     ]
+    },
+    "group": "continuous",
+    "label": "Resting blood pressure",
+    "unit": "mmHg"
+   },
+   "chol": {
+    "type": "continuous",
+    "edges": [
+     126.0,
+     162.5,
+     199.0,
+     235.5,
+     272.0,
+     308.5,
+     345.0,
+     381.5,
+     418.0,
+     454.5,
+     491.0,
+     527.5,
+     564.0
+    ],
+    "by_class": {
+     "0": [
+      17,
+      73,
+      188,
+      143,
+      61,
+      29,
+      6,
+      6,
+      0,
+      0,
+      0,
+      3
+     ],
+     "1": [
+      7,
+      63,
+      134,
+      123,
+      107,
+      54,
+      4,
+      7,
+      0,
+      0,
+      0,
+      0
+     ]
+    },
+    "group": "continuous",
+    "label": "Serum cholesterol",
+    "unit": "mg/dl"
+   },
+   "fbs": {
+    "type": "categorical",
+    "categories": [
+     0,
+     1
+    ],
+    "by_class": {
+     "0": [
+      455,
+      71
+     ],
+     "1": [
+      417,
+      82
+     ]
+    },
+    "missing": 0,
+    "group": "binary",
+    "label": "Fasting blood sugar > 120 mg/dl",
+    "values": {
+     "0": "No",
+     "1": "Yes"
+    }
+   },
+   "restecg": {
+    "type": "categorical",
+    "categories": [
+     0,
+     1,
+     2
+    ],
+    "by_class": {
+     "0": [
+      214,
+      309,
+      3
+     ],
+     "1": [
+      283,
+      204,
+      12
+     ]
+    },
+    "missing": 0,
+    "group": "nominal",
+    "label": "Resting ECG",
+    "unit": "code"
+   },
+   "thalach": {
+    "type": "continuous",
+    "edges": [
+     71.0,
+     81.917,
+     92.833,
+     103.75,
+     114.667,
+     125.583,
+     136.5,
+     147.417,
+     158.333,
+     169.25,
+     180.167,
+     191.083,
+     202.0
+    ],
+    "by_class": {
+     "0": [
+      0,
+      0,
+      3,
+      9,
+      31,
+      21,
+      58,
+      108,
+      126,
+      121,
+      39,
+      10
+     ],
+     "1": [
+      4,
+      6,
+      23,
+      50,
+      54,
+      77,
+      107,
+      67,
+      74,
+      26,
+      8,
+      3
+     ]
+    },
+    "group": "continuous",
+    "label": "Max heart rate achieved",
+    "unit": "bpm"
+   },
+   "exang": {
+    "type": "categorical",
+    "categories": [
+     0,
+     1
+    ],
+    "by_class": {
+     "0": [
+      455,
+      71
+     ],
+     "1": [
+      225,
+      274
+     ]
+    },
+    "missing": 0,
+    "group": "binary",
+    "label": "Exercise-induced angina",
+    "values": {
+     "0": "No",
+     "1": "Yes"
+    }
+   },
+   "oldpeak": {
+    "type": "continuous",
+    "edges": [
+     0.0,
+     0.517,
+     1.033,
+     1.55,
+     2.067,
+     2.583,
+     3.1,
+     3.617,
+     4.133,
+     4.65,
+     5.167,
+     5.683,
+     6.2
+    ],
+    "by_class": {
+     "0": [
+      325,
+      73,
+      63,
+      43,
+      10,
+      6,
+      3,
+      0,
+      3,
+      0,
+      0,
+      0
+     ],
+     "1": [
+      119,
+      82,
+      64,
+      78,
+      32,
+      61,
+      33,
+      16,
+      7,
+      0,
+      4,
+      3
+     ]
+    },
+    "group": "continuous",
+    "label": "ST depression (exercise vs rest)",
+    "unit": "mm"
+   },
+   "slope": {
+    "type": "categorical",
+    "categories": [
+     0,
+     1,
+     2
+    ],
+    "by_class": {
+     "0": [
+      28,
+      158,
+      340
+     ],
+     "1": [
+      46,
+      324,
+      129
+     ]
+    },
+    "missing": 0,
+    "group": "nominal",
+    "label": "Slope of peak exercise ST",
+    "unit": "code"
+   },
+   "ca": {
+    "type": "categorical",
+    "categories": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "by_class": {
+     "0": [
+      415,
+      66,
+      21,
+      9
+     ],
+     "1": [
+      163,
+      160,
+      113,
+      60
+     ]
+    },
+    "missing": 18,
+    "group": "nominal",
+    "label": "Major vessels coloured",
+    "unit": "code"
+   },
+   "thal": {
+    "type": "categorical",
+    "categories": [
+     1,
+     2,
+     3
+    ],
+    "by_class": {
+     "0": [
+      21,
+      412,
+      90
+     ],
+     "1": [
+      43,
+      132,
+      320
+     ]
+    },
+    "missing": 7,
+    "group": "nominal",
+    "label": "Thalassemia",
+    "unit": "code"
+   }
+  },
+  "correlation": {
+   "labels": [
+    "age",
+    "sex",
+    "cp",
+    "trestbps",
+    "chol",
+    "fbs",
+    "restecg",
+    "thalach",
+    "exang",
+    "oldpeak",
+    "slope",
+    "ca",
+    "thal",
+    "disease"
+   ],
+   "matrix": [
+    [
+     1.0,
+     -0.103,
+     -0.072,
+     0.271,
+     0.22,
+     0.121,
+     -0.133,
+     -0.39,
+     0.088,
+     0.208,
+     -0.169,
+     0.366,
+     0.07,
+     0.229
+    ],
+    [
+     -0.103,
+     1.0,
+     -0.041,
+     -0.079,
+     -0.198,
+     0.027,
+     -0.055,
+     -0.049,
+     0.139,
+     0.085,
+     -0.027,
+     0.082,
+     0.202,
+     0.28
+    ],
+    [
+     -0.072,
+     -0.041,
+     1.0,
+     0.038,
+     -0.082,
+     0.079,
+     0.044,
+     0.307,
+     -0.402,
+     -0.175,
+     0.132,
+     -0.226,
+     -0.175,
+     -0.435
+    ],
+    [
+     0.271,
+     -0.079,
+     0.038,
+     1.0,
+     0.128,
+     0.182,
+     -0.124,
+     -0.039,
+     0.061,
+     0.187,
+     -0.12,
+     0.107,
+     0.057,
+     0.139
+    ],
+    [
+     0.22,
+     -0.198,
+     -0.082,
+     0.128,
+     1.0,
+     0.027,
+     -0.147,
+     -0.022,
+     0.067,
+     0.065,
+     -0.014,
+     0.132,
+     0.086,
+     0.1
+    ],
+    [
+     0.121,
+     0.027,
+     0.079,
+     0.182,
+     0.027,
+     1.0,
+     -0.104,
+     -0.009,
+     0.049,
+     0.011,
+     -0.062,
+     0.15,
+     -0.012,
+     0.041
+    ],
+    [
+     -0.133,
+     -0.055,
+     0.044,
+     -0.124,
+     -0.147,
+     -0.104,
+     1.0,
+     0.048,
+     -0.066,
+     -0.05,
+     0.086,
+     -0.123,
+     -0.019,
+     -0.134
+    ],
+    [
+     -0.39,
+     -0.049,
+     0.307,
+     -0.039,
+     -0.022,
+     -0.009,
+     0.048,
+     1.0,
+     -0.38,
+     -0.35,
+     0.395,
+     -0.262,
+     -0.116,
+     -0.423
+    ],
+    [
+     0.088,
+     0.139,
+     -0.402,
+     0.061,
+     0.067,
+     0.049,
+     -0.066,
+     -0.38,
+     1.0,
+     0.311,
+     -0.267,
+     0.142,
+     0.222,
+     0.438
+    ],
+    [
+     0.208,
+     0.085,
+     -0.175,
+     0.187,
+     0.065,
+     0.011,
+     -0.05,
+     -0.35,
+     0.311,
+     1.0,
+     -0.575,
+     0.297,
+     0.202,
+     0.438
+    ],
+    [
+     -0.169,
+     -0.027,
+     0.132,
+     -0.12,
+     -0.014,
+     -0.062,
+     0.086,
+     0.395,
+     -0.267,
+     -0.575,
+     1.0,
+     -0.104,
+     -0.097,
+     -0.346
+    ],
+    [
+     0.366,
+     0.082,
+     -0.226,
+     0.107,
+     0.132,
+     0.15,
+     -0.123,
+     -0.262,
+     0.142,
+     0.297,
+     -0.104,
+     1.0,
+     0.147,
+     0.465
+    ],
+    [
+     0.07,
+     0.202,
+     -0.175,
+     0.057,
+     0.086,
+     -0.012,
+     -0.019,
+     -0.116,
+     0.222,
+     0.202,
+     -0.097,
+     0.147,
+     1.0,
+     0.361
+    ],
+    [
+     0.229,
+     0.28,
+     -0.435,
+     0.139,
+     0.1,
+     0.041,
+     -0.134,
+     -0.423,
+     0.438,
+     0.438,
+     -0.346,
+     0.465,
+     0.361,
+     1.0
+    ]
+   ]
+  }
+ },
+ "base_paper": {
+  "name": "Heart Disease (base-paper copy)",
+  "source": "Kaggle johnsmith88/heart-disease-dataset, as used by Naresh & Reddi (2025)",
+  "n_rows": 1025,
+  "n_distinct": 302,
+  "n_duplicate_rows": 723,
+  "n_shared_with_ours": 302,
+  "n_ours_distinct": 302,
+  "copies_per_patient": {
+   "3": 187,
+   "4": 114,
+   "8": 1
+  },
+  "class_counts_rows": {
+   "0": 526,
+   "1": 499
+  },
+  "class_counts_distinct": {
+   "0": 164,
+   "1": 138
+  },
+  "class_names": {
+   "0": "No Disease",
+   "1": "Disease"
+  }
+ }
+}

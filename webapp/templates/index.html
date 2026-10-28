@@ -24,29 +24,33 @@
         sees the patient's data.</p>
       </div>
       <div class="hero-side">
+        <div class="ds-switch">
+          <span class="ds-switch-label">Dataset</span>
+          <div class="theme-toggle" id="dsToggle" role="group" aria-label="Dataset"></div>
+        </div>
         <div class="theme-toggle" role="group" aria-label="Colour theme">
           <button class="theme-btn" data-theme="light">Light</button>
           <button class="theme-btn" data-theme="dark">Dark</button>
         </div>
         <div class="hero-pills">
           <span class="pill-badge teal"><span class="dot"></span>Working prototype · Phase 1 + 2</span>
-          <span class="pill-badge">Heart Disease · 5-fold CV</span>
+          <span class="pill-badge" id="dsPill">Heart Disease · 5-fold CV</span>
         </div>
       </div>
     </header>
 
     <nav class="tabs" role="tablist">
-      <button class="tab active" data-section="overview" role="tab">Overview</button>
-      <button class="tab" data-section="dataset" role="tab">Dataset</button>
-      <button class="tab" data-section="models" role="tab">Model Comparison</button>
-      <button class="tab" data-section="fhe" role="tab">Encrypted Inference</button>
-      <button class="tab" data-section="phase2" role="tab">Encryption Cost &amp; Base Paper</button>
-      <button class="tab" data-section="elastic" role="tab">Elastic Learner</button>
+      <button class="tab active" data-section="overview" role="tab"><span class="tab-n">1</span>Overview &amp; Data</button>
+      <button class="tab" data-section="models" role="tab"><span class="tab-n">2</span>Results</button>
+      <button class="tab" data-section="fhe" role="tab"><span class="tab-n">3</span>Encrypted Demo</button>
+      <button class="tab" data-section="phase2" role="tab"><span class="tab-n">4</span>Cost &amp; Base Paper</button>
     </nav>
+
+    <div class="ds-banner hidden" id="dsBanner"></div>
 
     <main>
 
-      <!-- ═══════════════════ 1 · OVERVIEW ═══════════════════ -->
+      <!-- ═══════════════════ 1 · OVERVIEW & DATA ═══════════════════ -->
       <section class="section" id="overview">
         <div class="card lead">
           <p class="eyebrow">Research questions</p>
@@ -64,149 +68,73 @@
 
         <div class="grid-2">
           <div class="card">
-            <p class="eyebrow">Evaluation</p>
-            <h3 class="card-title">Headline results <span class="muted">· pooled out-of-fold, 303 patients</span></h3>
-            <table class="table" id="ovResults"></table>
-            <p class="note" id="ovSelection"></p>
+            <p class="eyebrow">Data · target</p>
+            <h3 class="card-title">Class balance</h3>
+            <div id="hdBalance"></div>
           </div>
-          <div class="card">
-            <p class="eyebrow">Extension</p>
-            <h3 class="card-title">Encrypted inference <span class="muted">· all three models</span></h3>
-            <div id="ovFhe"></div>
-          </div>
-        </div>
-
-        <div class="grid-2">
-          <div class="card list-card ok">
-            <div class="list-head">
-              <div>
-                <p class="eyebrow ok"><span class="dot"></span>Complete</p>
-                <h3 class="card-title">Working in this prototype</h3>
-              </div>
-              <span class="count ok">5</span>
-            </div>
-            <ul class="checklist done">
-              <li>Heart Disease: cleaning, label correction, leakage-safe encoding</li>
-              <li>Stratified 5-fold CV with tuning inside each training fold</li>
-              <li>Logistic Regression, XGBoost and MLP trained and compared</li>
-              <li>Accuracy, precision, recall, F1, ROC-AUC, confusion matrices</li>
-              <li>Encrypted logistic regression: client → server → client</li>
-            </ul>
-          </div>
-          <div class="card list-card ok">
-            <div class="list-head">
-              <div>
-                <p class="eyebrow ok"><span class="dot"></span>Complete · Phase 2</p>
-                <h3 class="card-title">Added in Phase 2</h3>
-              </div>
-              <span class="count ok">4</span>
-            </div>
-            <ul class="checklist done">
-              <li>XGBoost and MLP compiled to FHE (TFHE via Concrete ML) and served client → server → client</li>
-              <li>Cost per model: bootstraps, key and ciphertext sizes, time and memory</li>
-              <li>Quantisation study, and x² vs ReLU activation study for the MLP</li>
-              <li>Base paper's own dataset re-evaluated: row split vs patient split</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══════════════════ 2 · DATASET ═══════════════════ -->
-      <section class="section hidden" id="dataset">
-        <div class="subtabs">
-          <button class="subtab active" data-ds="heart">Heart Disease <span class="pill">main</span></button>
-          <button class="subtab" data-ds="base">Base-paper copy <span class="pill muted-pill">1,025 rows</span></button>
-        </div>
-
-        <div id="dsHeart" class="stack">
-          <div class="stat-grid" id="hdStats"></div>
-
-          <div class="grid-2">
-            <div class="card">
-              <p class="eyebrow">Target</p>
-              <h3 class="card-title">Class balance</h3>
-              <div id="hdBalance"></div>
-            </div>
-            <div class="card">
-              <p class="eyebrow">Preprocessing</p>
-              <h3 class="card-title">Feature types</h3>
-              <table class="table compact" id="hdTypes"></table>
-              <p class="note">Every transformer is fitted inside each training fold, so no
-              statistic (mean, scale, most-frequent category) comes from held-out patients.</p>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-head">
-              <div>
-                <p class="eyebrow">Exploratory analysis</p>
-                <h3 class="card-title">Feature distribution by class</h3>
-              </div>
-              <select id="hdFeature" class="select" aria-label="Feature"></select>
-            </div>
-            <div id="hdHist" class="chart"></div>
-          </div>
-
-          <div class="card">
-            <p class="eyebrow">Exploratory analysis</p>
-            <h3 class="card-title">Correlation matrix <span class="muted">· including the disease label</span></h3>
-            <div id="hdCorr" class="chart"></div>
-          </div>
-
           <div class="card list-card warn">
             <p class="eyebrow warn"><span class="dot"></span>Data quality</p>
-            <h3 class="card-title">Corrections applied before training</h3>
-            <div class="grid-2 tight">
-              <div>
-                <h4 class="mini-h">1 · The CSV's labels are inverted</h4>
-                <p class="note">In this Kaggle export <code>target = 1</code> means <strong>no</strong> disease.
-                Every clinical sign points the same way, and 165 ones matches the 164 absence cases of the
-                original UCI data. We use <code>disease = 1 − target</code>, so recall means sensitivity to disease.</p>
-                <table class="table compact" id="hdEvidence"></table>
+            <h3 class="card-title">The CSV's labels are inverted</h3>
+            <p class="note">In this Kaggle export <code>target = 1</code> means <strong>no</strong> disease:
+            every clinical sign below points that way. We use <code>disease = 1 − target</code>.</p>
+            <table class="table compact" id="hdEvidence"></table>
+          </div>
+        </div>
+
+        <details class="more">
+          <summary>More data details <span class="muted">· distributions, feature types, correlations, invalid codes</span></summary>
+          <div class="stack">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <p class="eyebrow">Exploratory analysis</p>
+                  <h3 class="card-title">Feature distribution by class</h3>
+                </div>
+                <select id="hdFeature" class="select" aria-label="Feature"></select>
               </div>
-              <div>
-                <h4 class="mini-h">2 · Invalid category codes</h4>
-                <p class="note">Two codes do not exist in the UCI codebook — they are how this export
-                stored missing values. They are treated as missing and imputed (most frequent value)
-                inside each training fold, keeping all 303 records.</p>
+              <div id="hdHist" class="chart"></div>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <p class="eyebrow">Preprocessing</p>
+                <h3 class="card-title">Feature types</h3>
+                <table class="table compact" id="hdTypes"></table>
+                <p class="note">Fitted inside each training fold only, so nothing leaks from test patients.</p>
+              </div>
+              <div class="card">
+                <p class="eyebrow">Data quality</p>
+                <h3 class="card-title">Invalid category codes</h3>
+                <p class="note">Codes that don't exist in the UCI codebook are treated as missing and
+                imputed inside each training fold, so every record is kept.</p>
                 <table class="table compact" id="hdInvalid"></table>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div id="dsBase" class="stack hidden">
-          <div class="stat-grid" id="bpStats"></div>
-          <div class="grid-2">
             <div class="card">
-              <p class="eyebrow">Duplicates</p>
-              <h3 class="card-title">Copies of each patient record</h3>
-              <div id="bpCopies" class="chart"></div>
-            </div>
-            <div class="card list-card warn">
-              <p class="eyebrow warn"><span class="dot"></span>Why it matters</p>
-              <h3 class="card-title">Same patients, repeated</h3>
-              <div id="bpNote"></div>
+              <p class="eyebrow">Exploratory analysis</p>
+              <h3 class="card-title">Correlation matrix <span class="muted">· including the disease label</span></h3>
+              <div id="hdCorr" class="chart"></div>
             </div>
           </div>
-        </div>
+        </details>
       </section>
 
-      <!-- ═══════════════════ 3 · MODEL COMPARISON ═══════════════════ -->
+      <!-- ═══════════════════ 2 · RESULTS ═══════════════════ -->
       <section class="section hidden" id="models">
         <div class="card">
-          <div class="card-head">
-            <div>
-              <p class="eyebrow">Evaluation</p>
-              <h3 class="card-title">Performance <span class="muted">· stratified 5-fold CV, positive class = Disease</span></h3>
-            </div>
-            <div class="toggle" id="metricMode">
-              <button class="toggle-btn active" data-mode="pooled">Pooled OOF</button>
-              <button class="toggle-btn" data-mode="folds">Mean ± std</button>
-            </div>
+          <p class="eyebrow">Leaderboard</p>
+          <h3 class="card-title">All models side by side <span class="muted">· pooled out-of-fold, <span data-n>303 patients</span></span></h3>
+          <table class="table" id="elBoard"></table>
+          <p class="note">Bold = best per column. ★ = the metrics a diagnostic model is chosen on. The Elastic Learner
+          combines the other three, so its encrypted time is all three circuits together.</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card recommend" id="elRecommend"></div>
+          <div class="card">
+            <p class="eyebrow">Elastic Learner</p>
+            <h3 class="card-title">How the combined model works</h3>
+            <ol class="pipeline vertical" id="elHow"></ol>
           </div>
-          <table class="table metrics-table" id="mcTable"></table>
-          <p class="note" id="mcNote"></p>
         </div>
 
         <div class="grid-2">
@@ -217,7 +145,7 @@
           </div>
           <div class="card">
             <p class="eyebrow">Errors</p>
-            <h3 class="card-title">Confusion matrices <span class="muted">· threshold 0.5, all 303 patients</span></h3>
+            <h3 class="card-title">Confusion matrices <span class="muted">· threshold 0.5</span></h3>
             <div id="mcConfusion" class="cm-grid"></div>
           </div>
         </div>
@@ -226,29 +154,63 @@
           <p class="eyebrow">Research question</p>
           <h3 class="card-title">Complexity ladder</h3>
           <div class="ladder" id="mcLadder"></div>
-          <p class="note">Complexity is reported in each model's own terms — a tree ensemble has no
-          weights to count, so it is described by its structure instead. Times for LR and XGBoost
-          include the inner grid search; the MLP uses the fixed synopsis architecture, so it has none.</p>
         </div>
 
-        <div class="grid-2">
-          <div class="card">
-            <p class="eyebrow">Tuning</p>
-            <h3 class="card-title">Hyperparameters chosen in each fold</h3>
-            <table class="table compact" id="mcFolds"></table>
-            <p class="note">Tuned by grid search on each fold's training rows only (inner 5-fold CV).</p>
-          </div>
-          <div class="card">
-            <div class="card-head">
-              <div>
-                <p class="eyebrow">Training</p>
-                <h3 class="card-title">MLP training curve</h3>
+        <details class="more">
+          <summary>More details <span class="muted">· mean ± std, hyperparameters, MLP training curve, Elastic Learner weights</span></summary>
+          <div class="stack">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <p class="eyebrow">Evaluation</p>
+                  <h3 class="card-title">Performance <span class="muted">· 5-fold CV, positive class = Disease</span></h3>
+                </div>
+                <div class="toggle" id="metricMode">
+                  <button class="toggle-btn active" data-mode="pooled">Pooled OOF</button>
+                  <button class="toggle-btn" data-mode="folds">Mean ± std</button>
+                </div>
               </div>
-              <select id="mcCurveFold" class="select" aria-label="Fold"></select>
+              <table class="table metrics-table" id="mcTable"></table>
+              <p class="note" id="mcNote"></p>
             </div>
-            <div id="mcCurve" class="chart"></div>
+            <div class="grid-2">
+              <div class="card">
+                <p class="eyebrow">Tuning</p>
+                <h3 class="card-title">Hyperparameters chosen in each fold</h3>
+                <table class="table compact" id="mcFolds"></table>
+                <p class="note">Tuned by grid search on each fold's training rows only (inner 5-fold CV).</p>
+              </div>
+              <div class="card">
+                <div class="card-head">
+                  <div>
+                    <p class="eyebrow">Training</p>
+                    <h3 class="card-title">MLP training curve</h3>
+                  </div>
+                  <select id="mcCurveFold" class="select" aria-label="Fold"></select>
+                </div>
+                <div id="mcCurve" class="chart"></div>
+              </div>
+            </div>
+            <div class="card">
+              <p class="eyebrow">Verdicts</p>
+              <h3 class="card-title">Best model for each criterion</h3>
+              <div class="best-grid" id="elBest"></div>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <p class="eyebrow">Learned trust</p>
+                <h3 class="card-title">Elastic Learner: weight per model, per fold</h3>
+                <div id="elWeights" class="chart"></div>
+                <p class="note" id="elWeightsNote"></p>
+              </div>
+              <div class="card">
+                <p class="eyebrow">Discrimination</p>
+                <h3 class="card-title">ROC: Elastic Learner vs base models</h3>
+                <div id="elRoc" class="chart"></div>
+              </div>
+            </div>
           </div>
-        </div>
+        </details>
       </section>
 
       <!-- ═══════════════════ 4 · ENCRYPTED INFERENCE ═══════════════════ -->
@@ -268,7 +230,7 @@
               </div>
             </label>
             <div class="scenarios">
-              <span class="field-label">Quick scenarios</span>
+              <span class="field-label">Quick scenarios <span class="muted" id="fxScenModel"></span></span>
               <div class="scenario-list" id="fxScenarios"></div>
             </div>
             <div class="scenario-note hidden" id="fxScenarioNote"></div>
@@ -305,26 +267,27 @@
             </div>
             <div class="banner hidden" id="fxBanner"></div>
 
+            <div class="card hidden" id="fxElastic">
+              <p class="eyebrow">Elastic Learner</p>
+              <h3 class="card-title">How the three models were combined for this patient</h3>
+              <table class="table compact" id="fxElasticTable"></table>
+              <p class="note" id="fxElasticNote"></p>
+            </div>
+
             <div class="card">
               <p class="eyebrow">Evaluation</p>
-              <h3 class="card-title">Across all 303 out-of-fold predictions <span class="muted" id="fxAggModel"></span></h3>
+              <h3 class="card-title">Across all <span data-n-num>303</span> out-of-fold predictions <span class="muted" id="fxAggModel"></span></h3>
               <div id="fxAggregate"></div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ═══════════════════ 5 · PHASE 2 ═══════════════════ -->
+      <!-- ═══════════════════ 4 · COST & BASE PAPER ═══════════════════ -->
       <section class="section hidden" id="phase2">
-        <div class="card lead">
-          <p class="eyebrow">Phase 2 · research question</p>
-          <h2 class="lead-q">How much of each model's accuracy survives encryption — and what does
-          encryption cost as the model gets more complex?</h2>
-        </div>
-
         <div class="card">
           <p class="eyebrow">Accuracy</p>
-          <h3 class="card-title">Plaintext vs encrypted <span class="muted">· pooled out-of-fold, 303 patients</span></h3>
+          <h3 class="card-title">Plaintext vs encrypted <span class="muted">· pooled out-of-fold, <span data-n>303 patients</span></span></h3>
           <table class="table" id="p2Accuracy"></table>
           <p class="note" id="p2AccuracyNote"></p>
         </div>
@@ -333,9 +296,7 @@
           <p class="eyebrow">Cost</p>
           <h3 class="card-title">What encryption costs, per model <span class="muted">· mean over the 5 fold circuits</span></h3>
           <table class="table" id="p2Cost"></table>
-          <p class="note">PBS = programmable bootstrapping, the TFHE operation that evaluates a non-linear
-          step (a ReLU, a tree comparison) on encrypted data and resets its noise. It dominates run time.
-          Evaluation keys are public keys the server needs; the secret key never leaves the client.</p>
+          <p class="note">PBS (bootstrapping) is the encrypted operation behind every ReLU and tree comparison; it is what takes the time.</p>
         </div>
 
         <div class="grid-2">
@@ -351,74 +312,44 @@
           </div>
         </div>
 
-        <div class="grid-2">
-          <div class="card">
-            <p class="eyebrow">Study</p>
-            <h3 class="card-title">Quantisation: precision vs cost <span class="muted">· FHE simulation, 303 patients</span></h3>
-            <table class="table compact" id="p2Quant"></table>
-            <p class="note">Fewer bits make circuits cheaper but move probabilities further from
-            plaintext. The highlighted row is the setting used everywhere else.</p>
-          </div>
-          <div class="card">
-            <p class="eyebrow">Study</p>
-            <h3 class="card-title">MLP activation: ReLU vs x²</h3>
-            <table class="table compact" id="p2Act"></table>
-            <p class="note" id="p2ActNote"></p>
-          </div>
-        </div>
-
         <div class="card">
           <p class="eyebrow">Base paper · Naresh &amp; Reddi (2025)</p>
-          <h3 class="card-title">Our pipeline on the base paper's own dataset <span class="muted">· 1,025 rows, 302 distinct patients</span></h3>
+          <h3 class="card-title">Our models on the base paper's own dataset <span class="muted">· 1,025 rows, all copies of our patients</span></h3>
           <table class="table" id="p2Base"></table>
           <p class="note" id="p2BaseNote"></p>
         </div>
-      </section>
-
-      <!-- ═══════════════════ 6 · ELASTIC LEARNER ═══════════════════ -->
-      <section class="section hidden" id="elastic">
-        <div class="card lead">
-          <p class="eyebrow">Elastic Learner · stacking</p>
-          <h2 class="lead-q">Can a learner that combines all three models beat the best single one —
-          and which model should we actually deploy?</h2>
-        </div>
 
         <div class="grid-2">
           <div class="card">
-            <p class="eyebrow">How it works</p>
-            <h3 class="card-title">Elastic-net meta-learner</h3>
-            <ol class="pipeline vertical" id="elHow"></ol>
+            <p class="eyebrow">Base paper's file</p>
+            <h3 class="card-title">Copies of each patient record</h3>
+            <div id="bpCopies" class="chart"></div>
           </div>
-          <div class="card recommend" id="elRecommend"></div>
-        </div>
-
-        <div class="card">
-          <p class="eyebrow">Leaderboard</p>
-          <h3 class="card-title">All models side by side <span class="muted">· pooled out-of-fold, 303 patients</span></h3>
-          <table class="table" id="elBoard"></table>
-          <p class="note">Bold = best in the column. ★ marks the metrics a diagnostic model is chosen on.
-          The Elastic Learner's encrypted time is the sum of all three circuits, since it needs every base model's output.</p>
-        </div>
-
-        <div class="card">
-          <p class="eyebrow">Verdicts</p>
-          <h3 class="card-title">Best model for each criterion</h3>
-          <div class="best-grid" id="elBest"></div>
-        </div>
-
-        <div class="grid-2">
-          <div class="card">
-            <p class="eyebrow">Learned trust</p>
-            <h3 class="card-title">Weight given to each model, per fold</h3>
-            <div id="elWeights" class="chart"></div>
-            <p class="note" id="elWeightsNote"></p>
-          </div>
-          <div class="card">
-            <p class="eyebrow">Discrimination</p>
-            <h3 class="card-title">ROC: Elastic Learner vs base models</h3>
-            <div id="elRoc" class="chart"></div>
+          <div class="card list-card warn">
+            <p class="eyebrow warn"><span class="dot"></span>Why it matters</p>
+            <h3 class="card-title">Same patients, repeated</h3>
+            <div id="bpNote"></div>
           </div>
         </div>
+
+        <details class="more">
+          <summary>More encryption details <span class="muted">· quantisation study, ReLU vs x² activation</span></summary>
+          <div class="grid-2">
+            <div class="card">
+              <p class="eyebrow">Study</p>
+              <h3 class="card-title">Quantisation: precision vs cost <span class="muted">· FHE simulation, <span data-n>303 patients</span></span></h3>
+              <table class="table compact" id="p2Quant"></table>
+              <p class="note">Fewer bits make circuits cheaper but move probabilities further from
+              plaintext. The highlighted row is the setting used everywhere else.</p>
+            </div>
+            <div class="card">
+              <p class="eyebrow">Study</p>
+              <h3 class="card-title">MLP activation: ReLU vs x²</h3>
+              <table class="table compact" id="p2Act"></table>
+              <p class="note" id="p2ActNote"></p>
+            </div>
+          </div>
+        </details>
       </section>
 
     </main>

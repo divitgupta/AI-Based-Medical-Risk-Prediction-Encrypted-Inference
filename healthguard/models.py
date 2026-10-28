@@ -64,6 +64,14 @@ def build_mlp(y_train=None):
 BUILDERS = {"logreg": build_logreg, "xgboost": build_xgb, "mlp": build_mlp}
 
 
+def fit_params(pipeline, groups):
+    """Extra fit() arguments for a pipeline: the MLP takes patient ids so its
+    early-stopping split never separates copies of one patient."""
+    if groups is not None and isinstance(pipeline.named_steps["model"], MLPClassifier):
+        return {"model__groups": groups}
+    return {}
+
+
 def complexity(key, pipeline):
     """
     Model-appropriate complexity measures. A single "parameter count" means

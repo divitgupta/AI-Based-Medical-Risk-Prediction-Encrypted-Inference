@@ -1,7 +1,9 @@
 """
-Phase 2: our pipeline on the base paper's own data.
+Phase 2: the base paper's own dataset, split two ways.
 
-    python -m healthguard.base_paper [--quick]
+    python -m healthguard.experiment --dataset base1025_patient
+    python -m healthguard.experiment --dataset base1025_row
+    python -m healthguard.base_paper            # this summary
 
 Naresh & Reddi (2025) report 85% accuracy for plaintext logistic regression
 and 84% for their CKKS-encrypted version, on the Kaggle file
@@ -9,28 +11,23 @@ johnsmith88/heart-disease-dataset. That file has 1,025 rows but only 302
 distinct patient records (see data.load_base_paper), so a split made over
 *rows* can put copies of the same patient in both training and test sets.
 
-We run the same three models and the encrypted logistic regression twice:
+The full pipeline (three models, FHE, Elastic Learner) is retrained on the
+file twice, each run in its own results folder:
 
-    row split      stratified 5-fold over the 1,025 rows (copies leak across
-                   train and test, as in a plain random split);
+    row split      our usual stratified 5-fold, applied to the 1,025 rows
+                   (copies leak across train and test, as in a plain random
+                   split);
     patient split  stratified *grouped* 5-fold, every copy of a patient kept
-                   on the same side (no leakage).
+                   on the same side - also inside tuning and early stopping.
 
-The gap between the two is how much duplicate leakage inflates the scores.
+This script puts the two side by side with what the paper reports. The gap
+between them is how much duplicate leakage inflates the scores.
 """
 
-import argparse
 import json
-import time
 from datetime import datetime
 
-import numpy as np
-from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
-
-from . import config, fhe
-from .data import load_base_paper
-from .evaluate import metrics
-from .experiment import _tune_and_fit
+from . import config
 
 # What the base paper reports for its heart dataset (Naresh & Reddi 2025,
 # Journal of Big Data 12:52, results section). Accuracy is the only metric
@@ -45,67 +42,41 @@ BASE_PAPER_REPORTED = {
     "split": "not described in the paper",
 }
 
-
-def _splits(kind, y, group):
-    if kind == "row":
-        cv = StratifiedKFold(config.N_FOLDS, shuffle=True, random_state=config.SEED)
-        return list(cv.split(np.zeros(len(y)), y))
-    cv = StratifiedGroupKFold(config.N_FOLDS, shuffle=True, random_state=config.SEED)
-    return list(cv.split(np.zeros(len(y)), y, group))
+SPLITS = {"row_split": "base1025_row", "patient_split": "base1025_patient"}
 
 
-def _run_split(kind, X, y, group, quick):
-    fold_list = _splits(kind, y, group)
-    oof = {k: np.zeros(len(y)) for k in config.MODEL_KEYS}
-    oof_fhe = np.zeros(len(y))
-    leaked = 0
-    for k, (tr, te) in enumerate(fold_list):
-        leaked += int(np.isin(group[te], group[tr]).sum())
-        X_tr, X_te, y_tr = X.iloc[tr], X.iloc[te], y[tr]
-        for key in config.MODEL_KEYS:
-            best, *_ = _tune_and_fit(key, X_tr, y_tr, quick)
-            oof[key][te] = best.predict_proba(X_te)[:, 1]
-            if key == "logreg":
-                model, _ = fhe.compile_model("logreg", best, X_tr)
-                X_te_enc = best.named_steps["prep"].transform(X_te)
-                oof_fhe[te] = model.predict_proba(X_te_enc, fhe="simulate")[:, 1]
-        print(f"   {kind:7s} fold {k + 1}: "
-              + "  ".join(f"{key} {metrics(y[te], oof[key][te])['accuracy']:.3f}"
-                          for key in config.MODEL_KEYS))
+def _from_run(dataset):
+    path = config.DATASETS[dataset]["results"] / "metrics.json"
+    if not path.exists():
+        raise SystemExit(f"Missing {path}. Run python -m healthguard.experiment --dataset {dataset} first.")
+    m = json.loads(path.read_text())
     return {
-        "test_rows_with_copy_in_training": leaked,
-        "test_rows_with_copy_in_training_pct": leaked / len(y),
-        "models": {k: metrics(y, oof[k]) for k in config.MODEL_KEYS},
-        "fhe_logreg": {
-            "pooled": metrics(y, oof_fhe),
-            "agreement": float(np.mean((oof_fhe >= 0.5) == (oof["logreg"] >= 0.5))),
-        },
-    }
+        "dataset": dataset,
+        "test_rows_with_copy_in_training": m["test_rows_with_copy_in_training"],
+        "test_rows_with_copy_in_training_pct": m["test_rows_with_copy_in_training_pct"],
+        "models": {k: m["models"][k]["pooled"] for k in config.MODEL_KEYS},
+        "fhe_logreg": {"pooled": m["fhe"]["logreg"]["pooled"], "agreement": m["fhe"]["logreg"]["agreement"]},
+        "fhe": {k: {"pooled": m["fhe"][k]["pooled"], "agreement": m["fhe"][k]["agreement"]}
+                for k in config.MODEL_KEYS},
+    }, m
 
 
-def run(quick=False):
-    t0 = time.perf_counter()
-    X, y, group = load_base_paper()
-    print(f"Base-paper file: {len(y)} rows, {len(np.unique(group))} distinct patients")
-    out = {
-        "dataset": {"rows": int(len(y)), "distinct_patients": int(len(np.unique(group))),
-                    "positive_rows": int(y.sum())},
-        "base_paper_reported": BASE_PAPER_REPORTED,
-        "row_split": _run_split("row", X, y, group, quick),
-        "patient_split": _run_split("patient", X, y, group, quick),
-        "quick": quick,
-        "meta": {"generated": datetime.now().isoformat(timespec="seconds"),
-                 "runtime_seconds": time.perf_counter() - t0, "seed": config.SEED},
-    }
-    with open(config.RESULTS / "base_paper.json", "w") as f:
+def run():
+    out = {"base_paper_reported": BASE_PAPER_REPORTED}
+    for key, dataset in SPLITS.items():
+        out[key], m = _from_run(dataset)
+    out["dataset"] = {"rows": m["n_samples"], "distinct_patients": m["n_distinct_patients"],
+                      "positive_rows": m["n_positive"]}
+    out["meta"] = {"generated": datetime.now().isoformat(timespec="seconds"), "seed": config.SEED}
+    with open(config.DATASETS[config.DEFAULT_DATASET]["results"] / "base_paper.json", "w") as f:
         json.dump(out, f, indent=1)
 
-    print("\n══ Base-paper data · pooled accuracy ══")
+    print("\n══ Base paper's file · pooled accuracy (retrained) ══")
     print(f"   base paper (reported)    LR {BASE_PAPER_REPORTED['lr_plaintext_accuracy']:.3f}  "
           f"encrypted LR {BASE_PAPER_REPORTED['lr_encrypted_accuracy']['poly_modulus_8192']:.3f}")
-    for kind in ("row_split", "patient_split"):
+    for kind in SPLITS:
         r = out[kind]
-        print(f"   ours, {kind:15s}   " + "  ".join(
+        print(f"   {kind:15s}   " + "  ".join(
             f"{config.MODEL_NAMES[k]} {r['models'][k]['accuracy']:.3f}" for k in config.MODEL_KEYS)
             + f"  encrypted LR {r['fhe_logreg']['pooled']['accuracy']:.3f}"
             + f"  ({r['test_rows_with_copy_in_training_pct'] * 100:.0f}% of test rows also in training)")
@@ -113,6 +84,4 @@ def run(quick=False):
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--quick", action="store_true", help="tiny grids, fewer epochs")
-    run(quick=ap.parse_args().quick)
+    run()

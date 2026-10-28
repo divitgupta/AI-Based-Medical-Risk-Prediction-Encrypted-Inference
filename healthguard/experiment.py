@@ -2,7 +2,10 @@
 Main experiment: Heart Disease, stratified 5-fold CV, three models, each one
 also compiled to FHE (Phase 1: logistic regression; Phase 2: XGBoost, MLP).
 
-    python -m healthguard.experiment [--quick]
+    python -m healthguard.experiment [--quick] [--dataset cleveland|base1025_patient|base1025_row]
+
+--dataset picks one of config.DATASETS; each writes its own results folder.
+For base1025_patient every split is grouped by patient (see config).
 
 For every outer fold:
   1. each model pipeline is tuned with GridSearchCV on that fold's *training*
@@ -28,15 +31,17 @@ from datetime import datetime
 
 import joblib
 import numpy as np
-from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn.model_selection import GridSearchCV
 
 from . import config, eda, fhe
-from .data import fold_of_each_sample, folds, load_heart
+from .data import fold_of_each_sample, folds, inner_cv, load_dataset, match_to_cleveland
 from .evaluate import metrics, roc_points, summarize_folds
-from .models import BUILDERS, F2_SCORER, build_mlp, complexity
+from .models import BUILDERS, F2_SCORER, build_mlp, complexity, fit_params
 
 
-def _tune_and_fit(key, X_tr, y_tr, quick):
+def _tune_and_fit(key, X_tr, y_tr, quick, groups=None):
+    """Tune on the training rows only. `groups` (patient ids) makes the inner
+    tuning folds and the MLP's early-stopping split patient-aware."""
     pipe, grid = BUILDERS[key](y_tr)
     if key == "mlp" and quick:
         pipe.set_params(model__max_epochs=60)
@@ -44,16 +49,14 @@ def _tune_and_fit(key, X_tr, y_tr, quick):
     if grid:
         if quick:
             grid = {k: v[:1] for k, v in grid.items()}
-        search = GridSearchCV(
-            pipe, grid, scoring=F2_SCORER, refit=True, n_jobs=-1,
-            cv=StratifiedKFold(config.N_INNER_FOLDS, shuffle=True, random_state=config.SEED),
-        )
-        search.fit(X_tr, y_tr)
+        search = GridSearchCV(pipe, grid, scoring=F2_SCORER, refit=True, n_jobs=-1,
+                              cv=inner_cv(groups))
+        search.fit(X_tr, y_tr, groups=groups)
         best = search.best_estimator_
         params = {k.replace("model__", ""): v for k, v in search.best_params_.items()}
         inner_f2 = float(search.best_score_)
     else:
-        best = pipe.fit(X_tr, y_tr)
+        best = pipe.fit(X_tr, y_tr, **fit_params(pipe, groups))
         m = best.named_steps["model"]
         params = {"architecture": " → ".join(map(str, m.layer_sizes_)),
                   "dropout": m.dropout, "lr": m.lr,
@@ -91,13 +94,13 @@ def _quant_study(key, best, X_tr, X_te, prob):
     return out
 
 
-def _activation_study(X_tr, X_te, y_tr, y_te, quick):
+def _activation_study(X_tr, X_te, y_tr, y_te, quick, groups=None):
     """MLP with x² instead of ReLU: plaintext quality and its FHE circuit."""
     pipe, _ = build_mlp(y_tr)
     pipe.set_params(model__activation="square")
     if quick:
         pipe.set_params(model__max_epochs=60)
-    pipe.fit(X_tr, y_tr)
+    pipe.fit(X_tr, y_tr, **fit_params(pipe, groups))
     prob = pipe.predict_proba(X_te)[:, 1]
     model, _ = fhe.compile_model("mlp", pipe, X_tr)
     p_enc = model.predict_proba(pipe.named_steps["prep"].transform(X_te), fhe="simulate")[:, 1]
@@ -111,19 +114,24 @@ def _versions():
             "concrete-ml": concrete.ml.__version__}
 
 
-def run(quick=False):
+def run(quick=False, dataset=config.DEFAULT_DATASET):
     t_start = time.perf_counter()
+    config.use_dataset(dataset)
+    ds = config.DATASETS[dataset]
     config.RESULTS.mkdir(parents=True, exist_ok=True)
     for d in (config.MODELS_DIR, config.FHE_DIR):
         if d.exists():
             shutil.rmtree(d)
         d.mkdir(parents=True)
 
-    X, y = load_heart()
-    fold_list = folds(y)
+    X, y, groups = load_dataset(dataset)
+    fold_list = folds(y, groups)
     owner = fold_of_each_sample(fold_list, len(y))
-    print(f"Heart Disease: {len(y)} patients, {int(y.sum())} with disease | "
-          f"{config.N_FOLDS}-fold stratified CV{' (quick)' if quick else ''}")
+    # For the base paper's file: which of our Cleveland patients each row copies.
+    patient = None if dataset == "cleveland" else match_to_cleveland()
+    n_distinct = len(y) if patient is None else int(len(np.unique(patient)))
+    print(f"{ds['label']}: {len(y)} rows, {n_distinct} distinct patients, {int(y.sum())} with disease | "
+          f"{ds['split']}{' (quick)' if quick else ''} → {config.RESULTS}")
 
     oof = {k: np.zeros(len(y)) for k in config.MODEL_KEYS}
     oof_fhe = {k: np.zeros(len(y)) for k in config.MODEL_KEYS}
@@ -137,9 +145,12 @@ def run(quick=False):
     for k, (tr, te) in enumerate(fold_list):
         print(f"\n── Fold {k + 1}/{config.N_FOLDS}  (train {len(tr)}, test {len(te)})")
         X_tr, X_te, y_tr, y_te = X.iloc[tr], X.iloc[te], y[tr], y[te]
+        g_tr = None if groups is None else groups[tr]
+        if groups is not None:
+            assert not set(groups[tr]) & set(groups[te]), "a patient is on both sides of the split"
 
         for key in config.MODEL_KEYS:
-            best, params, inner_f2, fit_s = _tune_and_fit(key, X_tr, y_tr, quick)
+            best, params, inner_f2, fit_s = _tune_and_fit(key, X_tr, y_tr, quick, g_tr)
             prob = best.predict_proba(X_te)[:, 1]
             oof[key][te] = prob
             m = metrics(y_te, prob)
@@ -163,15 +174,18 @@ def run(quick=False):
             if key in config.FHE_QUANT_STUDY:
                 quant[key].append(_quant_study(key, best, X_tr, X_te, prob))
 
-        sq_prob[te], sq_enc[te], cost = _activation_study(X_tr, X_te, y_tr, y_te, quick)
+        sq_prob[te], sq_enc[te], cost = _activation_study(X_tr, X_te, y_tr, y_te, quick, g_tr)
         sq_cost.append(cost)
         print(f"   {'MLP with x²':20s} acc {metrics(y_te, sq_prob[te])['accuracy']:.3f}  "
               f"{cost['pbs_count']} PBS")
 
     # ── Aggregate ────────────────────────────────────────────────────────
     results = {
-        "dataset": "heart",
+        "dataset": dataset,
+        "dataset_label": ds["label"],
+        "split": ds["split"],
         "n_samples": int(len(y)),
+        "n_distinct_patients": n_distinct,
         "n_positive": int(y.sum()),
         "n_folds": config.N_FOLDS,
         "positive_class": "Disease",
@@ -251,6 +265,12 @@ def run(quick=False):
         "prob": {k: [round(float(v), 6) for v in oof[k]] for k in config.MODEL_KEYS},
         "prob_fhe": {k: [round(float(v), 6) for v in oof_fhe[k]] for k in config.MODEL_KEYS},
     }
+    if patient is not None:
+        predictions["patient"] = patient.tolist()
+        # Test rows whose identical copy sat in that fold's training rows.
+        leaked = sum(int(np.isin(patient[te], patient[tr]).sum()) for tr, te in fold_list)
+        results["test_rows_with_copy_in_training"] = leaked
+        results["test_rows_with_copy_in_training_pct"] = leaked / len(y)
 
     def dump(name, obj):
         with open(config.RESULTS / name, "w") as f:
@@ -259,9 +279,9 @@ def run(quick=False):
     dump("metrics.json", results)
     dump("predictions.json", predictions)
     dump("training_curves.json", {"mlp": curves})
-    dump("eda.json", eda.build())
+    dump("eda.json", eda.build(dataset))
 
-    print("\n══ Pooled out-of-fold results (303 patients, positive = Disease) ══")
+    print(f"\n══ Pooled out-of-fold results ({len(y)} rows, {dataset}, positive = Disease) ══")
     for key in config.MODEL_KEYS:
         p, s = results["models"][key]["pooled"], results["models"][key]["summary"]
         print(f"   {config.MODEL_NAMES[key]:20s} acc {p['accuracy']:.4f} "
@@ -281,4 +301,6 @@ def run(quick=False):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true", help="tiny grids, fewer epochs")
-    run(quick=ap.parse_args().quick)
+    ap.add_argument("--dataset", choices=list(config.DATASETS), default=config.DEFAULT_DATASET)
+    args = ap.parse_args()
+    run(quick=args.quick, dataset=args.dataset)

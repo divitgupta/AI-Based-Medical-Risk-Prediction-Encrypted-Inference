@@ -197,6 +197,17 @@ a { color: var(--accent); }
   box-shadow: 0 0 0 1px var(--border-strong) inset;
 }
 
+/* ─── Dataset switch ────────────────────────────────────────────────────── */
+.ds-switch { display: flex; align-items: center; gap: 10px; }
+.ds-switch-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
+.theme-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ds-banner {
+  margin: -6px 0 18px; padding: 12px 18px; border-radius: 14px;
+  background: var(--amber-soft); border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+  color: var(--text); font-size: 0.9rem;
+}
+.ds-banner b { color: var(--amber); }
+
 /* ─── Section tabs ──────────────────────────────────────────────────────── */
 .tabs {
   position: sticky; top: 14px; z-index: 20;
@@ -205,12 +216,30 @@ a { color: var(--accent); }
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   max-width: 100%; overflow-x: auto;
 }
-.tab { font-size: 0.93rem; padding: 10px 20px; }
+.tab { font-size: 0.93rem; padding: 10px 20px; display: inline-flex; align-items: center; gap: 8px; }
+.tab-n {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  font-size: 0.72rem; font-weight: 700; background: var(--inset); border: 1px solid var(--border-strong);
+}
+.tab.active .tab-n { border-color: var(--accent-border); background: var(--accent-soft); }
 .tab.active { background: var(--accent-soft); color: var(--accent); box-shadow: 0 0 0 1px var(--accent-border) inset; }
 
 /* ─── Layout ────────────────────────────────────────────────────────────── */
 main { padding-bottom: 36px; }
 .section, .stack { display: flex; flex-direction: column; gap: 20px; }
+
+/* Secondary detail, collapsed by default so the demo view stays short. */
+details.more { border: 1px dashed var(--border-strong); border-radius: 18px; padding: 4px 6px; }
+details.more > summary {
+  cursor: pointer; list-style: none; padding: 12px 14px;
+  font-weight: 650; font-size: 0.92rem; color: var(--text-2);
+}
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "▸"; display: inline-block; width: 1.1em; transition: transform 0.15s; }
+details.more[open] > summary::before { transform: rotate(90deg); }
+details.more > summary:hover { color: var(--text); }
+details.more[open] { padding-bottom: 6px; }
+details.more > .grid-2, details.more > .stack, details.more > .card { margin: 4px 0 0; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .grid-2.tight { gap: 32px; }
 

@@ -9,7 +9,13 @@ This project trains three models of increasing complexity on the Heart Disease
 predictions from **all three** through **Fully Homomorphic Encryption (FHE)**:
 the server computes on encrypted data and returns an encrypted answer that only
 the patient can decrypt. Phase 2 measures what encryption costs per model and
-re-evaluates the base paper on its own dataset.
+re-runs the whole pipeline on the base paper's own dataset.
+
+The dashboard has four tabs (Overview & Data · Results · Encrypted Demo ·
+Cost & Base Paper) and a **dataset switch** with three options. Every tab can
+show our Cleveland file (303 patients), or the base paper's 1,025-row file
+with all models **retrained** on it, either split by patient (honest) or split
+by row (copies leak, scores inflated; shown for comparison).
 
 | | |
 |---|---|
@@ -88,15 +94,16 @@ python3.11 -m venv venv
 # 2. Create the FHE interpreter at ~/aimlel-venv (see note below)
 ./scripts/setup_fhe_env.sh
 
-# 3. Train, evaluate, compile all three models to FHE, run the Phase-2
-#    studies and the base-paper comparison (~10 min, mostly genuine encrypted
-#    XGBoost runs). Optional: results/ is already committed.
+# 3. Train, evaluate and compile all three models to FHE on all three
+#    datasets (Cleveland, base paper by patient, base paper by row), with the
+#    Phase-2 studies (~30 min, mostly genuine encrypted XGBoost runs).
+#    Optional: results/ is already committed.
 ./scripts/run_experiments.sh
 
 # 4. Start the dashboard on http://localhost:5001
 ./scripts/run_app.sh
 
-# Tests (23, ~20 s; one runs genuine encrypted MLP inference)
+# Tests (29, ~30 s; one runs genuine encrypted MLP inference)
 ~/aimlel-venv/bin/python -m pytest tests/ -p no:warnings
 ```
 
@@ -219,6 +226,13 @@ the best single one, and the learned weights swing from fold to fold. That's
 the same conclusion from a third direction: on 303 patients, complexity
 doesn't pay.
 
+**It runs on any patient, encrypted.** On the Encrypted Inference tab, choose
+*Elastic Learner*: the server runs all three encrypted models on the
+patient's ciphertext, and the client decrypts the three probabilities and
+combines them with the learned weights, so the server never sees the data.
+Encrypted and plaintext Elastic Learner agree on 301 / 303 patients; one run
+takes about 35–55 s, mostly XGBoost.
+
 ### The base paper on its own dataset (Phase 2)
 
 The base paper used Kaggle `johnsmith88/heart-disease-dataset`
@@ -233,6 +247,7 @@ inverted labels), each repeated 1–4 times. Running our full pipeline on it
 | Base paper, as reported (CKKS) | 85% | 84% | — | — | split not described |
 | Ours, split by **row** | 85.9% | 85.9% | 99.2% | 96.2% | 99% |
 | Ours, split by **patient** | 83.5% | 83.5% | 78.1% | 81.0% | 0% |
+| **Our trained models, all 1,025 rows** (not retrained) | **85.2%** | **85.5%** | 80.4% | 83.6% | 0% |
 
 - Our logistic regression matches the base paper's 85%, and our encrypted LR
   keeps every decision (100% agreement) where theirs lost about 1 point.
@@ -242,6 +257,24 @@ inverted labels), each repeated 1–4 times. Running our full pipeline on it
   inflates accuracy, especially for complex models.
 - Split correctly, the base paper's data gives the same answer as our main
   study: added complexity does not help.
+
+**Our trained models on the whole base-paper file** (the dataset switch on
+the site). Nothing is retrained and nothing is written to disk: when the web
+app starts, it runs all 1,025 rows through the saved Cleveland fold models.
+Every row is a copy of one of our patients, so each row is scored by the fold
+model that never saw that patient. Logistic regression is also run with
+genuine encryption on every row (~11 s at start-up).
+
+| Model | Accuracy | Precision | Recall | F1 | ROC-AUC | Encrypted |
+|---|---|---|---|---|---|---|
+| Base paper, as reported | 85% | — | — | — | — | 84% |
+| **Logistic Regression** 👑 | **85.2%** | **87.3%** | 81.4% | **84.2%** | **0.915** | **85.5%**, same decision on 1,022 / 1,025 rows |
+| MLP | 83.6% | 84.1% | **81.8%** | 82.9% | 0.900 | live, one row at a time (5 s/row) |
+| Elastic Learner | 83.5% | 84.5% | 81.0% | 82.7% | 0.906 | live, one row at a time (55 s/row) |
+| XGBoost | 80.4% | 82.8% | 75.4% | 78.9% | 0.874 | live, one row at a time (50 s/row) |
+
+The 3 encrypted LR disagreements are the three copies of patient #85, the
+one borderline case (p = 0.533). Our Cleveland results are unchanged.
 
 Results are reproducible: all runs are seeded, and two runs give identical
 metrics and predictions apart from timings.
@@ -265,7 +298,8 @@ healthguard/     ML package: config, data, models, mlp, evaluate, eda, fhe,
                  experiment (main study + Phase-2 FHE studies), elastic (stacking
                  + leaderboard), base_paper
 webapp/          Flask server + single-page dashboard (vanilla JS, SVG charts, no CDN)
-data/raw/        heart_disease.csv (303, main) · heart_disease_base_paper_1025.csv
+data/raw/        heart_disease.csv (303, main) · heart_disease_base_paper_1025.csv ·
+                 base_paper_statlog_270.csv, base_paper_framingham_4240.csv (the paper's other two)
 results/         generated: metrics.json, predictions.json, eda.json, base_paper.json, elastic.json,
                  training_curves.json, models/, fhe/{logreg,xgboost,mlp}/
 scripts/         setup_fhe_env.sh, run_experiments.sh, run_app.sh

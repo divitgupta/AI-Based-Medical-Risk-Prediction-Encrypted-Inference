@@ -12,9 +12,51 @@ HEART_CSV = DATA_RAW / "heart_disease.csv"
 # The 1,025-row Kaggle file the base paper used (johnsmith88/heart-disease-dataset).
 BASE_PAPER_CSV = DATA_RAW / "heart_disease_base_paper_1025.csv"
 
-RESULTS = ROOT / "results"
+# ── Datasets ─────────────────────────────────────────────────────────────
+# The full pipeline (three models, FHE, Elastic Learner) can be trained on
+# three datasets; each writes its own results folder and the web app has a
+# switch between them.
+#   cleveland         our 303 patients, stratified 5-fold.
+#   base1025_patient  the base paper's 1,025-row file (only 302 distinct
+#                     patients). Every split - outer folds, inner tuning
+#                     folds, the MLP's early-stopping slice - keeps all copies
+#                     of a patient on one side, so no model is tested on a
+#                     patient it trained on.
+#   base1025_row      the same file with our usual split applied to rows, as
+#                     a plain random split would. Copies of a test patient sit
+#                     in training, so its scores are inflated (shown for
+#                     comparison).
+RESULTS_ROOT = ROOT / "results"
+DATASETS = {
+    "cleveland": {"label": "Cleveland · 303 patients", "short": "Cleveland (303)",
+                  "results": RESULTS_ROOT, "split": "stratified 5-fold"},
+    "base1025_patient": {"label": "Base paper · 1,025 rows, split by patient",
+                         "short": "Base paper · by patient",
+                         "results": RESULTS_ROOT / "base1025_patient",
+                         "split": "stratified 5-fold, grouped by patient"},
+    "base1025_row": {"label": "Base paper · 1,025 rows, split by row",
+                     "short": "Base paper · by row",
+                     "results": RESULTS_ROOT / "base1025_row",
+                     "split": "stratified 5-fold over rows (copies leak)"},
+}
+DEFAULT_DATASET = "cleveland"
+
+DATASET = DEFAULT_DATASET
+RESULTS = DATASETS[DATASET]["results"]
 MODELS_DIR = RESULTS / "models"
 FHE_DIR = RESULTS / "fhe"
+
+
+def use_dataset(name):
+    """Point RESULTS / MODELS_DIR / FHE_DIR at one dataset's results folder."""
+    global DATASET, RESULTS, MODELS_DIR, FHE_DIR
+    if name not in DATASETS:
+        raise ValueError(f"unknown dataset '{name}' (choose from {', '.join(DATASETS)})")
+    DATASET = name
+    RESULTS = DATASETS[name]["results"]
+    MODELS_DIR = RESULTS / "models"
+    FHE_DIR = RESULTS / "fhe"
+
 
 # ── Reproducibility & protocol ───────────────────────────────────────────
 SEED = 42
